@@ -18,57 +18,72 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const db = new Database("maid_by_ana.db");
+let db: any;
+try {
+  const dbPath = process.env.NODE_ENV === "production" ? path.join("/tmp", "maid_by_ana.db") : "maid_by_ana.db";
+  db = new Database(dbPath);
+  
+  // Initialize Database
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS clients (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT NOT NULL, -- 'regular', 'airbnb'
+      name TEXT NOT NULL,
+      owner_name TEXT,
+      property_name TEXT,
+      address TEXT,
+      email TEXT,
+      phone TEXT,
+      frequency TEXT,
+      property_link TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
 
-// Initialize Database
-db.exec(`
-  CREATE TABLE IF NOT EXISTS clients (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    type TEXT NOT NULL, -- 'regular', 'airbnb'
-    name TEXT NOT NULL,
-    owner_name TEXT,
-    property_name TEXT,
-    address TEXT,
-    email TEXT,
-    phone TEXT,
-    frequency TEXT,
-    property_link TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
+    CREATE TABLE IF NOT EXISTS services (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      client_id INTEGER NOT NULL,
+      date TEXT NOT NULL,
+      service_type TEXT NOT NULL,
+      service_value REAL NOT NULL,
+      staff_value REAL NOT NULL,
+      payment_status TEXT DEFAULT 'pending',
+      payment_method TEXT,
+      payment_date TEXT,
+      notes TEXT,
+      FOREIGN KEY (client_id) REFERENCES clients (id)
+    );
 
-  CREATE TABLE IF NOT EXISTS services (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    client_id INTEGER NOT NULL,
-    date TEXT NOT NULL,
-    service_type TEXT NOT NULL,
-    service_value REAL NOT NULL,
-    staff_value REAL NOT NULL,
-    payment_status TEXT DEFAULT 'pending',
-    payment_method TEXT,
-    payment_date TEXT,
-    notes TEXT,
-    FOREIGN KEY (client_id) REFERENCES clients (id)
-  );
+    CREATE TABLE IF NOT EXISTS quotations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      client_name TEXT NOT NULL,
+      type TEXT NOT NULL, -- 'hourly', 'detailed'
+      details TEXT NOT NULL, -- JSON string
+      total REAL NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      sent INTEGER DEFAULT 0
+    );
 
-  CREATE TABLE IF NOT EXISTS quotations (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    client_name TEXT NOT NULL,
-    type TEXT NOT NULL, -- 'hourly', 'detailed'
-    details TEXT NOT NULL, -- JSON string
-    total REAL NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    sent INTEGER DEFAULT 0
-  );
-
-  CREATE TABLE IF NOT EXISTS notifications (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_role TEXT NOT NULL, -- 'admin', 'staff'
-    title TEXT NOT NULL,
-    message TEXT NOT NULL,
-    is_read INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-`);
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_role TEXT NOT NULL, -- 'admin', 'staff'
+      title TEXT NOT NULL,
+      message TEXT NOT NULL,
+      is_read INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+} catch (error) {
+  console.error("Database initialization failed:", error);
+  // Fallback to a mock DB object to prevent the server from crashing
+  db = {
+    prepare: () => ({
+      all: () => [],
+      get: () => null,
+      run: () => ({ lastInsertRowid: 0 })
+    }),
+    exec: () => {}
+  };
+}
 
 async function startServer() {
   const app = express();
