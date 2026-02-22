@@ -2,7 +2,7 @@ export type UserRole = 'admin' | 'staff';
 export type Language = 'en' | 'pt';
 
 export interface Client {
-  id: number;
+  id: number | string;
   type: 'regular' | 'airbnb';
   name: string;
   owner_name?: string;
@@ -16,8 +16,8 @@ export interface Client {
 }
 
 export interface Service {
-  id: number;
-  client_id: number;
+  id: number | string;
+  client_id: number | string;
   client_name?: string;
   client_type?: string;
   date: string;
@@ -31,7 +31,7 @@ export interface Service {
 }
 
 export interface Quotation {
-  id: number;
+  id: number | string;
   client_name: string;
   type: 'hourly' | 'detailed';
   details: any;
@@ -41,7 +41,7 @@ export interface Quotation {
 }
 
 export interface Notification {
-  id: number;
+  id: number | string;
   user_role: UserRole;
   title: string;
   message: string;

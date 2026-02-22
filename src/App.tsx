@@ -45,6 +45,8 @@ import { cn, formatCurrency } from './lib/utils';
 import { generateReceiptPDF } from './lib/pdf';
 import { translations } from './translations';
 
+import { firebaseService } from './lib/firebaseService';
+
 export default function App() {
   const [role, setRole] = useState<UserRole>('admin');
   const [lang, setLang] = useState<Language>('en');
@@ -58,24 +60,49 @@ export default function App() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  const isFirebaseEnabled = !!(import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAM4K96HLPce8iRkcVZVWc3uS_T5c0gTX8");
+
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
-  }, [role]);
+    let unsubscribe: (() => void) | undefined;
+
+    if (isFirebaseEnabled) {
+      unsubscribe = firebaseService.subscribeNotifications(role, (notifs) => {
+        setNotifications(notifs);
+      });
+    } else {
+      const interval = setInterval(fetchNotifications, 30000);
+      return () => clearInterval(interval);
+    }
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [role, isFirebaseEnabled]);
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [clientsRes, servicesRes, quotationsRes] = await Promise.all([
-        fetch('/api/clients'),
-        fetch('/api/services'),
-        fetch('/api/quotations')
-      ]);
-      setClients(await clientsRes.json());
-      setServices(await servicesRes.json());
-      setQuotations(await quotationsRes.json());
-      await fetchNotifications();
+      if (isFirebaseEnabled) {
+        const [c, s, q] = await Promise.all([
+          firebaseService.getClients(),
+          firebaseService.getServices(),
+          firebaseService.getQuotations()
+        ]);
+        setClients(c);
+        setServices(s);
+        setQuotations(q);
+      } else {
+        const [clientsRes, servicesRes, quotationsRes] = await Promise.all([
+          fetch('/api/clients'),
+          fetch('/api/services'),
+          fetch('/api/quotations')
+        ]);
+        setClients(await clientsRes.json());
+        setServices(await servicesRes.json());
+        setQuotations(await quotationsRes.json());
+        await fetchNotifications();
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -84,51 +111,76 @@ export default function App() {
   };
 
   const fetchNotifications = async () => {
-    try {
-      const res = await fetch(`/api/notifications?role=${role}`);
-      setNotifications(await res.json());
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
+    if (isFirebaseEnabled) {
+      const notifs = await firebaseService.getNotifications(role);
+      setNotifications(notifs);
+    } else {
+      try {
+        const res = await fetch(`/api/notifications?role=${role}`);
+        setNotifications(await res.json());
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+      }
     }
   };
 
-  const markNotificationRead = async (id: number) => {
-    await fetch('/api/notifications/read', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id })
-    });
-    fetchNotifications();
+  const markNotificationRead = async (id: string | number) => {
+    if (isFirebaseEnabled) {
+      await firebaseService.markNotificationRead(id.toString());
+    } else {
+      await fetch('/api/notifications/read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      fetchNotifications();
+    }
   };
 
   const addClient = async (clientData: Partial<Client>) => {
-    await fetch('/api/clients', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(clientData)
-    });
+    if (isFirebaseEnabled) {
+      await firebaseService.addClient(clientData);
+    } else {
+      await fetch('/api/clients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(clientData)
+      });
+    }
     fetchData();
   };
 
   const addService = async (serviceData: Partial<Service>) => {
-    await fetch('/api/services', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(serviceData)
-    });
+    if (isFirebaseEnabled) {
+      await firebaseService.addService(serviceData);
+    } else {
+      await fetch('/api/services', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(serviceData)
+      });
+    }
     fetchData();
   };
 
-  const markAsPaid = async (id: number) => {
-    await fetch(`/api/services/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+  const markAsPaid = async (id: string | number) => {
+    if (isFirebaseEnabled) {
+      await firebaseService.updateService(id.toString(), {
         payment_status: 'paid',
         payment_date: new Date().toISOString(),
         payment_method: 'Transfer'
-      })
-    });
+      });
+    } else {
+      await fetch(`/api/services/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          payment_status: 'paid',
+          payment_date: new Date().toISOString(),
+          payment_method: 'Transfer'
+        })
+      });
+    }
     fetchData();
   };
 
@@ -302,12 +354,17 @@ export default function App() {
             )}
             {activeTab === 'quotation' && (
               <QuotationView 
-                onSave={(q) => {
-                  fetch('/api/quotations', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(q)
-                  }).then(fetchData);
+                onSave={async (q) => {
+                  if (isFirebaseEnabled) {
+                    await firebaseService.addQuotation(q);
+                  } else {
+                    await fetch('/api/quotations', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(q)
+                    });
+                  }
+                  fetchData();
                 }}
                 t={t}
               />
@@ -339,7 +396,7 @@ function NavItem({ icon, label, active, onClick }: { icon: React.ReactNode, labe
   );
 }
 
-function Dashboard({ role, clients, services, onMarkPaid, t }: { role: UserRole, clients: Client[], services: Service[], onMarkPaid: (id: number) => void, t: any }) {
+function Dashboard({ role, clients, services, onMarkPaid, t }: { role: UserRole, clients: Client[], services: Service[], onMarkPaid: (id: number | string) => void, t: any }) {
   const pendingServices = services.filter(s => s.payment_status === 'pending');
   const todayServices = services.filter(s => s.date === format(new Date(), 'yyyy-MM-dd'));
   
@@ -791,7 +848,7 @@ function ToggleButton({ label, active, onClick }: { label: string, active: boole
   );
 }
 
-function ServicesView({ role, services, clients, onAddService, onMarkPaid, t }: { role: UserRole, services: Service[], clients: Client[], onAddService: (s: any) => void, onMarkPaid: (id: number) => void, t: any }) {
+function ServicesView({ role, services, clients, onAddService, onMarkPaid, t }: { role: UserRole, services: Service[], clients: Client[], onAddService: (s: any) => void, onMarkPaid: (id: number | string) => void, t: any }) {
   const [showAdd, setShowAdd] = useState(false);
   
   return (
