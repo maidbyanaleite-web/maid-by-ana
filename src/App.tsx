@@ -22,7 +22,9 @@ import {
   BarChart3,
   TrendingUp,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Menu,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';
@@ -59,6 +61,7 @@ export default function App() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const isFirebaseEnabled = !!(import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAM4K96HLPce8iRkcVZVWc3uS_T5c0gTX8");
 
@@ -185,10 +188,42 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row">
+      {/* Mobile Header */}
+      <div className="lg:hidden bg-teal-900 text-white p-4 flex items-center justify-between sticky top-0 z-50 shadow-md">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-gold-500 rounded flex items-center justify-center">
+            <Home className="text-teal-900" size={18} />
+          </div>
+          <h1 className="font-bold text-base">Maid By Ana</h1>
+        </div>
+        <button 
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+        >
+          {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      </div>
+
+      {/* Sidebar Overlay */}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsSidebarOpen(false)}
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          />
+        )}
+      </AnimatePresence>
+
       {/* Sidebar */}
-      <aside className="w-64 bg-teal-900 text-white flex flex-col fixed h-full">
-        <div className="p-6 flex items-center gap-3 border-b border-white/10">
+      <aside className={cn(
+        "w-64 bg-teal-900 text-white flex flex-col fixed lg:sticky h-full top-0 z-50 transition-transform duration-300 lg:translate-x-0",
+        isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <div className="p-6 hidden lg:flex items-center gap-3 border-b border-white/10">
           <div className="w-10 h-10 bg-gold-500 rounded-lg flex items-center justify-center">
             <Home className="text-teal-900" size={24} />
           </div>
@@ -203,32 +238,32 @@ export default function App() {
             icon={<LayoutDashboard size={20} />} 
             label={t.dashboard} 
             active={activeTab === 'dashboard'} 
-            onClick={() => setActiveTab('dashboard')} 
+            onClick={() => { setActiveTab('dashboard'); setIsSidebarOpen(false); }} 
           />
           <NavItem 
             icon={<Users size={20} />} 
             label={t.clients} 
             active={activeTab === 'clients'} 
-            onClick={() => setActiveTab('clients')} 
+            onClick={() => { setActiveTab('clients'); setIsSidebarOpen(false); }} 
           />
           <NavItem 
             icon={<Calendar size={20} />} 
             label={t.services} 
             active={activeTab === 'services'} 
-            onClick={() => setActiveTab('services')} 
+            onClick={() => { setActiveTab('services'); setIsSidebarOpen(false); }} 
           />
           <NavItem 
             icon={<Calculator size={20} />} 
             label={t.quotation} 
             active={activeTab === 'quotation'} 
-            onClick={() => setActiveTab('quotation')} 
+            onClick={() => { setActiveTab('quotation'); setIsSidebarOpen(false); }} 
           />
           {role === 'admin' && (
             <NavItem 
               icon={<BarChart3 size={20} />} 
               label={t.reports} 
               active={activeTab === 'reports'} 
-              onClick={() => setActiveTab('reports')} 
+              onClick={() => { setActiveTab('reports'); setIsSidebarOpen(false); }} 
             />
           )}
         </nav>
@@ -268,8 +303,8 @@ export default function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 ml-64 p-8">
-        <header className="flex justify-end mb-8 relative">
+      <main className="flex-1 p-4 lg:p-8">
+        <header className="flex justify-end mb-6 lg:mb-8 relative">
           <button 
             onClick={() => setShowNotifications(!showNotifications)}
             className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 relative"
@@ -406,14 +441,14 @@ function Dashboard({ role, clients, services, onMarkPaid, t }: { role: UserRole,
 
   return (
     <div className="space-y-8">
-      <header className="flex justify-between items-end">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-teal-900">{t.welcome}, {role === 'admin' ? 'Ana' : t.staff}!</h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-teal-900">{t.welcome}, {role === 'admin' ? 'Ana' : t.staff}!</h2>
           <p className="text-slate-500">Maid By Ana.</p>
         </div>
-        <div className="text-right">
-          <p className="text-sm font-medium text-slate-400 uppercase tracking-wider">{format(new Date(), 'EEEE')}</p>
-          <p className="text-lg font-bold text-teal-900">{format(new Date(), 'MMMM do, yyyy')}</p>
+        <div className="text-left md:text-right">
+          <p className="text-xs md:text-sm font-medium text-slate-400 uppercase tracking-wider">{format(new Date(), 'EEEE')}</p>
+          <p className="text-base md:text-lg font-bold text-teal-900">{format(new Date(), 'MMMM do, yyyy')}</p>
         </div>
       </header>
 
@@ -537,7 +572,7 @@ function ClientsView({ role, clients, onAddClient, t }: { role: UserRole, client
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-teal-900">{t.clients}</h2>
           <p className="text-slate-500">Maid By Ana.</p>
@@ -545,7 +580,7 @@ function ClientsView({ role, clients, onAddClient, t }: { role: UserRole, client
         {role === 'admin' && (
           <button 
             onClick={() => setShowAdd(true)}
-            className="bg-teal-900 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-teal-800 transition-colors shadow-lg shadow-teal-900/20"
+            className="w-full md:w-auto bg-teal-900 text-white px-4 py-2 rounded-xl flex items-center justify-center gap-2 hover:bg-teal-800 transition-colors shadow-lg shadow-teal-900/20"
           >
             <Plus size={20} /> {t.addClient}
           </button>
@@ -553,7 +588,7 @@ function ClientsView({ role, clients, onAddClient, t }: { role: UserRole, client
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-2xl border border-slate-200">
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <FilterButton active={filter === 'all'} onClick={() => setFilter('all')}>{t.all}</FilterButton>
           <FilterButton active={filter === 'regular'} onClick={() => setFilter('regular')}>{t.residential}</FilterButton>
           <FilterButton active={filter === 'airbnb'} onClick={() => setFilter('airbnb')}>{t.airbnb}</FilterButton>
@@ -707,17 +742,17 @@ function QuotationView({ onSave, t }: { onSave: (q: any) => void, t: any }) {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-2 space-y-6">
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 space-y-6">
-            <div className="flex gap-4 p-1 bg-slate-100 rounded-xl">
+          <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-200 space-y-6">
+            <div className="flex flex-wrap gap-2 p-1 bg-slate-100 rounded-xl">
               <button 
                 onClick={() => setType('hourly')}
-                className={cn("flex-1 py-2 rounded-lg text-sm font-bold transition-all", type === 'hourly' ? "bg-white text-teal-900 shadow-sm" : "text-slate-500")}
+                className={cn("flex-1 py-2 px-3 rounded-lg text-xs md:text-sm font-bold transition-all", type === 'hourly' ? "bg-white text-teal-900 shadow-sm" : "text-slate-500")}
               >
                 {t.simple}
               </button>
               <button 
                 onClick={() => setType('detailed')}
-                className={cn("flex-1 py-2 rounded-lg text-sm font-bold transition-all", type === 'detailed' ? "bg-white text-teal-900 shadow-sm" : "text-slate-500")}
+                className={cn("flex-1 py-2 px-3 rounded-lg text-xs md:text-sm font-bold transition-all", type === 'detailed' ? "bg-white text-teal-900 shadow-sm" : "text-slate-500")}
               >
                 {t.detailed}
               </button>
@@ -783,11 +818,11 @@ function QuotationView({ onSave, t }: { onSave: (q: any) => void, t: any }) {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-teal-900 text-white p-8 rounded-3xl shadow-xl shadow-teal-900/20 sticky top-8">
+          <div className="bg-teal-900 text-white p-6 md:p-8 rounded-3xl shadow-xl shadow-teal-900/20 md:sticky md:top-8">
             <h3 className="text-gold-500 font-bold uppercase tracking-widest text-xs mb-6">{t.estimatedTotal}</h3>
             <div className="flex items-baseline gap-1 mb-8">
-              <span className="text-2xl font-medium">$</span>
-              <span className="text-6xl font-bold">{total.toFixed(2)}</span>
+              <span className="text-xl md:text-2xl font-medium">$</span>
+              <span className="text-4xl md:text-6xl font-bold">{total.toFixed(2)}</span>
             </div>
 
             <div className="space-y-4 mb-8">
@@ -853,7 +888,7 @@ function ServicesView({ role, services, clients, onAddService, onMarkPaid, t }: 
   
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-teal-900">{t.services}</h2>
           <p className="text-slate-500">Maid By Ana.</p>
@@ -861,7 +896,7 @@ function ServicesView({ role, services, clients, onAddService, onMarkPaid, t }: 
         {role === 'admin' && (
           <button 
             onClick={() => setShowAdd(true)}
-            className="bg-teal-900 text-white px-4 py-2 rounded-xl flex items-center gap-2"
+            className="w-full md:w-auto bg-teal-900 text-white px-4 py-2 rounded-xl flex items-center justify-center gap-2"
           >
             <Plus size={20} /> {t.logService}
           </button>
@@ -869,7 +904,8 @@ function ServicesView({ role, services, clients, onAddService, onMarkPaid, t }: 
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        <table className="w-full text-left">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left min-w-[800px]">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
               <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase">{t.date}</th>
@@ -924,6 +960,7 @@ function ServicesView({ role, services, clients, onAddService, onMarkPaid, t }: 
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {showAdd && (
@@ -1153,22 +1190,22 @@ function ReportsView({ t }: { t: any }) {
           <h2 className="text-2xl font-bold text-teal-900">{t.financialReports}</h2>
           <p className="text-slate-500">Maid By Ana.</p>
         </div>
-        <div className="flex gap-2 p-1 bg-white border border-slate-200 rounded-xl">
+        <div className="flex flex-wrap gap-2 p-1 bg-white border border-slate-200 rounded-xl">
           <button 
             onClick={() => setRange('week')}
-            className={cn("px-4 py-1.5 rounded-lg text-sm font-bold transition-all", range === 'week' ? "bg-teal-900 text-white" : "text-slate-500 hover:bg-slate-50")}
+            className={cn("flex-1 md:flex-none px-3 md:px-4 py-1.5 rounded-lg text-xs md:text-sm font-bold transition-all", range === 'week' ? "bg-teal-900 text-white" : "text-slate-500 hover:bg-slate-50")}
           >
             {t.thisWeek}
           </button>
           <button 
             onClick={() => setRange('month')}
-            className={cn("px-4 py-1.5 rounded-lg text-sm font-bold transition-all", range === 'month' ? "bg-teal-900 text-white" : "text-slate-500 hover:bg-slate-50")}
+            className={cn("flex-1 md:flex-none px-3 md:px-4 py-1.5 rounded-lg text-xs md:text-sm font-bold transition-all", range === 'month' ? "bg-teal-900 text-white" : "text-slate-500 hover:bg-slate-50")}
           >
             {t.thisMonth}
           </button>
           <button 
             onClick={() => setRange('custom')}
-            className={cn("px-4 py-1.5 rounded-lg text-sm font-bold transition-all", range === 'custom' ? "bg-teal-900 text-white" : "text-slate-500 hover:bg-slate-50")}
+            className={cn("flex-1 md:flex-none px-3 md:px-4 py-1.5 rounded-lg text-xs md:text-sm font-bold transition-all", range === 'custom' ? "bg-teal-900 text-white" : "text-slate-500 hover:bg-slate-50")}
           >
             {t.custom}
           </button>
@@ -1179,13 +1216,13 @@ function ReportsView({ t }: { t: any }) {
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex gap-4 p-4 bg-white rounded-2xl border border-slate-200"
+          className="flex flex-col md:flex-row gap-4 p-4 bg-white rounded-2xl border border-slate-200"
         >
-          <div className="flex-1">
+          <div className="w-full md:flex-1">
             <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Start Date</label>
             <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg" />
           </div>
-          <div className="flex-1">
+          <div className="w-full md:flex-1">
             <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">End Date</label>
             <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg" />
           </div>
