@@ -75,7 +75,7 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeInspection, setActiveInspection] = useState<{ serviceId: string, clientId: string | number } | null>(null);
 
-  const isFirebaseEnabled = !!import.meta.env.VITE_FIREBASE_API_KEY && import.meta.env.VITE_FIREBASE_API_KEY.length > 20;
+  const isFirebaseEnabled = true; // Enabled by default with restored keys
 
   useEffect(() => {
     fetchData();

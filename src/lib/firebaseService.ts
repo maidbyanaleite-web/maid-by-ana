@@ -29,6 +29,7 @@ const INSPECTIONS_COL = "inspections";
 export const firebaseService = {
   // Storage
   async uploadImage(file: File, path: string): Promise<string> {
+    if (!storage) throw new Error("Storage not initialized");
     const storageRef = ref(storage, path);
     await uploadBytes(storageRef, file);
     return getDownloadURL(storageRef);
@@ -49,6 +50,7 @@ export const firebaseService = {
   },
 
   async updateSettings(settings: Settings): Promise<void> {
+    if (!db) throw new Error("Firestore not initialized");
     const docRef = doc(db, SETTINGS_COL, "global");
     await updateDoc(docRef, { ...settings } as any).catch(async (error) => {
       if (error.code === 'not-found') {
@@ -69,6 +71,7 @@ export const firebaseService = {
   },
 
   async addClient(client: Partial<Client>) {
+    if (!db) throw new Error("Firestore not initialized");
     return addDoc(collection(db, CLIENTS_COL), {
       ...client,
       created_at: serverTimestamp()
@@ -76,6 +79,7 @@ export const firebaseService = {
   },
 
   async updateClient(id: string, data: Partial<Client>) {
+    if (!db) throw new Error("Firestore not initialized");
     const clientRef = doc(db, CLIENTS_COL, id);
     return updateDoc(clientRef, data);
   },
@@ -89,6 +93,7 @@ export const firebaseService = {
   },
 
   async addService(service: Partial<Service>) {
+    if (!db) throw new Error("Firestore not initialized");
     return addDoc(collection(db, SERVICES_COL), {
       ...service,
       payment_status: service.payment_status || 'pending',
@@ -97,6 +102,7 @@ export const firebaseService = {
   },
 
   async updateService(id: string, data: Partial<Service>) {
+    if (!db) throw new Error("Firestore not initialized");
     const serviceRef = doc(db, SERVICES_COL, id);
     return updateDoc(serviceRef, data);
   },
@@ -110,6 +116,7 @@ export const firebaseService = {
   },
 
   async addQuotation(quotation: Partial<Quotation>) {
+    if (!db) throw new Error("Firestore not initialized");
     return addDoc(collection(db, QUOTATIONS_COL), {
       ...quotation,
       sent: 0,
@@ -119,6 +126,7 @@ export const firebaseService = {
 
   // Notifications
   async getNotifications(role: string): Promise<Notification[]> {
+    if (!db) return [];
     const q = query(
       collection(db, NOTIFICATIONS_COL), 
       where("user_role", "==", role),
@@ -130,6 +138,7 @@ export const firebaseService = {
   },
 
   async markNotificationRead(id: string) {
+    if (!db) throw new Error("Firestore not initialized");
     const ref = doc(db, NOTIFICATIONS_COL, id);
     return updateDoc(ref, { is_read: 1 });
   },
@@ -151,6 +160,7 @@ export const firebaseService = {
 
   // Inspections
   async getInspectionReport(serviceId: string): Promise<InspectionReport | null> {
+    if (!db) return null;
     const q = query(collection(db, INSPECTIONS_COL), where("service_id", "==", serviceId));
     const snapshot = await getDocs(q);
     if (snapshot.empty) return null;
@@ -159,6 +169,7 @@ export const firebaseService = {
   },
 
   async saveInspectionReport(report: Partial<InspectionReport>) {
+    if (!db) throw new Error("Firestore not initialized");
     if (report.id) {
       const reportRef = doc(db, INSPECTIONS_COL, report.id);
       const { id, ...data } = report;
@@ -173,6 +184,7 @@ export const firebaseService = {
   },
 
   subscribeInspectionReport(serviceId: string, callback: (report: InspectionReport | null) => void) {
+    if (!db) return () => {};
     const q = query(collection(db, INSPECTIONS_COL), where("service_id", "==", serviceId));
     return onSnapshot(q, (snapshot) => {
       if (snapshot.empty) {
