@@ -1,22 +1,39 @@
 @import "tailwindcss";
 
+/* Importação das fontes (obrigatório para as variáveis abaixo funcionarem) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+
 @theme {
+  /* Cores personalizadas do projeto Maid By Ana */
   --color-teal-900: #0d2d3a;
   --color-teal-800: #134e4a;
   --color-gold-500: #d4af37;
   --color-gold-600: #b8860b;
   
+  /* Configuração de tipografia */
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Playfair Display", serif;
 }
 
 @layer base {
+  /* Usando CSS padrão para o body para evitar problemas de recursão no build */
   body {
-    @apply bg-slate-50 text-slate-900;
+    background-color: var(--color-slate-50);
+    color: var(--color-slate-900);
+    font-family: var(--font-sans);
+  }
+
+  h1, h2, h3, .font-serif {
+    font-family: var(--font-serif);
   }
 }
 
-.glass {
-  @apply bg-white/80 backdrop-blur-md border border-white/20;
+@layer components {
+  /* Classe Utilitária de Glassmorphism */
+  .glass {
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
 }
-

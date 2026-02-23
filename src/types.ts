@@ -2,26 +2,27 @@ export type UserRole = 'admin' | 'staff';
 export type Language = 'en' | 'pt';
 
 export interface Client {
-  id: number | string;
+  id: string | number;
   type: 'regular' | 'airbnb';
   name: string;
   owner_name?: string;
-  property_name?: string;
+  property_name?: string; // Nome da propriedade para Airbnb
   address: string;
   email: string;
   phone: string;
-  frequency: string;
+  // Melhorar a tipagem da frequência para evitar erros
+  frequency: 'weekly' | 'biweekly' | 'monthly' | 'one-time' | string;
   property_link?: string;
-  created_at: string;
+  created_at: string; // ISO format: YYYY-MM-DD
   mandatory_photos?: string[];
 }
 
 export interface Service {
-  id: number | string;
-  client_id: number | string;
+  id: string | number;
+  client_id: string | number;
   client_name?: string;
-  client_type?: string;
-  date: string;
+  client_type?: 'regular' | 'airbnb' | string;
+  date: string; // ISO format: YYYY-MM-DD
   service_type: string;
   service_value: number;
   staff_value: number;
@@ -32,21 +33,21 @@ export interface Service {
 }
 
 export interface Quotation {
-  id: number | string;
+  id: string | number;
   client_name: string;
   type: 'hourly' | 'detailed';
   details: any;
   total: number;
   created_at: string;
-  sent: number;
+  sent: boolean; // Alterado de number para boolean para facilitar o uso no React
 }
 
 export interface Notification {
-  id: number | string;
+  id: string | number;
   user_role: UserRole;
   title: string;
   message: string;
-  is_read: number;
+  is_read: boolean; // Alterado de number para boolean
   created_at: string;
 }
 
@@ -62,7 +63,7 @@ export interface InspectionPhoto {
   comment?: string;
   admin_reply?: string;
   timestamp: string;
-  label?: string;
+  label?: string; // Ex: "Living Room", "Bathroom"
 }
 
 export interface InspectionReport {
