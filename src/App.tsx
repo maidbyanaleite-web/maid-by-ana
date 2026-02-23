@@ -75,9 +75,7 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeInspection, setActiveInspection] = useState<{ serviceId: string, clientId: string | number } | null>(null);
 
-  const isFirebaseEnabled = !!import.meta.env.VITE_FIREBASE_API_KEY && 
-    import.meta.env.VITE_FIREBASE_API_KEY !== "YOUR_FIREBASE_API_KEY" &&
-    import.meta.env.VITE_FIREBASE_API_KEY.startsWith("AIza");
+  const isFirebaseEnabled = !!import.meta.env.VITE_FIREBASE_API_KEY && import.meta.env.VITE_FIREBASE_API_KEY.length > 20;
 
   useEffect(() => {
     fetchData();
@@ -123,7 +121,7 @@ export default function App() {
         setSettings(st);
         success = true;
       } catch (error) {
-        console.error('Firebase fetch failed, falling back to local API:', error);
+        // Silent fallback
       }
     }
 
