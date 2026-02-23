@@ -1,16 +1,5 @@
 {
-  "short_name": "MaidByAna",
-  "name": "Maid By Ana - Cleaning Management",
-  "description": "Professional residential and Airbnb cleaning management system.",
-  "start_url": "/",
-  "display": "standalone",
-  "theme_color": "#ffffff",
-  "background_color": "#ffffff",
-  "icons": [
-    {
-      "src": "favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
-    }
-  ]
+  "name": "Maid By Ana",
+  "description": "Residential and Airbnb cleaning management app with financial control, quotations, and receipt generation.",
+  "requestFramePermissions": ["camera"]
 }
