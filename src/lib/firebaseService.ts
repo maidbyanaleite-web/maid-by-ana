@@ -9,16 +9,15 @@ import {
   orderBy, 
   limit, 
   onSnapshot,
-  Timestamp,
   serverTimestamp,
   getDoc,
   setDoc
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "./firebase";
-import { Client, Service, Quotation, Notification, Settings, InspectionReport, InspectionPhoto } from "../types";
+import { Client, Service, Quotation, Notification, Settings, InspectionReport } from "../types";
 
-// Collection Names
+// Nomes das Coleções
 const CLIENTS_COL = "clients";
 const SERVICES_COL = "services";
 const QUOTATIONS_COL = "quotations";
@@ -29,19 +28,23 @@ const INSPECTIONS_COL = "inspections";
 export const firebaseService = {
   // Storage
   async uploadImage(file: File, path: string): Promise<string> {
-    if (!storage) throw new Error("Storage not initialized");
+    if (!storage) throw new Error("Firebase Storage não inicializado. Verifique as chaves no .env");
     const storageRef = ref(storage, path);
     await uploadBytes(storageRef, file);
     return getDownloadURL(storageRef);
   },
+
   // Settings
   async getSettings(): Promise<Settings> {
-    if (!db) throw new Error("Firestore not initialized");
+    if (!db) throw new Error("Firestore não inicializado");
     const docRef = doc(db, SETTINGS_COL, "global");
     const docSnap = await getDoc(docRef);
+    
     if (docSnap.exists()) {
       return docSnap.data() as Settings;
     }
+    
+    // Configuração padrão caso o documento não exista no Firebase
     return {
       company_name: "Maid By Ana",
       company_subtitle: "Cleaning Management",
@@ -50,28 +53,28 @@ export const firebaseService = {
   },
 
   async updateSettings(settings: Settings): Promise<void> {
-    if (!db) throw new Error("Firestore not initialized");
+    if (!db) throw new Error("Firestore não inicializado");
     const docRef = doc(db, SETTINGS_COL, "global");
-    await updateDoc(docRef, { ...settings } as any).catch(async (error) => {
-      if (error.code === 'not-found') {
-        const { setDoc } = await import("firebase/firestore");
-        await setDoc(docRef, settings);
-      } else {
-        throw error;
-      }
-    });
+    
+    // Usa setDoc com merge para criar ou atualizar o documento global de uma vez
+    await setDoc(docRef, { ...settings }, { merge: true });
   },
 
   // Clients
   async getClients(): Promise<Client[]> {
-    if (!db) throw new Error("Firestore not initialized");
-    const q = query(collection(db, CLIENTS_COL), orderBy("name"));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as any));
+    if (!db) throw new Error("Firestore não inicializado");
+    try {
+      const q = query(collection(db, CLIENTS_COL), orderBy("name"));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as any));
+    } catch (error) {
+      console.error("Erro ao buscar clientes:", error);
+      return [];
+    }
   },
 
   async addClient(client: Partial<Client>) {
-    if (!db) throw new Error("Firestore not initialized");
+    if (!db) throw new Error("Firestore não inicializado");
     return addDoc(collection(db, CLIENTS_COL), {
       ...client,
       created_at: serverTimestamp()
@@ -79,21 +82,27 @@ export const firebaseService = {
   },
 
   async updateClient(id: string, data: Partial<Client>) {
-    if (!db) throw new Error("Firestore not initialized");
+    if (!db) throw new Error("Firestore não inicializado");
     const clientRef = doc(db, CLIENTS_COL, id);
     return updateDoc(clientRef, data);
   },
 
   // Services
   async getServices(): Promise<Service[]> {
-    if (!db) throw new Error("Firestore not initialized");
-    const q = query(collection(db, SERVICES_COL), orderBy("date", "desc"));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as any));
+    if (!db) throw new Error("Firestore não inicializado");
+    try {
+      // Nota: Se der erro de índice no console, remova o orderBy momentaneamente
+      const q = query(collection(db, SERVICES_COL), orderBy("date", "desc"));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as any));
+    } catch (error) {
+      console.error("Erro ao buscar serviços:", error);
+      return [];
+    }
   },
 
   async addService(service: Partial<Service>) {
-    if (!db) throw new Error("Firestore not initialized");
+    if (!db) throw new Error("Firestore não inicializado");
     return addDoc(collection(db, SERVICES_COL), {
       ...service,
       payment_status: service.payment_status || 'pending',
@@ -110,9 +119,14 @@ export const firebaseService = {
   // Quotations
   async getQuotations(): Promise<Quotation[]> {
     if (!db) throw new Error("Firestore not initialized");
-    const q = query(collection(db, QUOTATIONS_COL), orderBy("created_at", "desc"));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as any));
+    try {
+      const q = query(collection(db, QUOTATIONS_COL), orderBy("created_at", "desc"));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as any));
+    } catch (error) {
+      console.error("Erro ao buscar orçamentos:", error);
+      return [];
+    }
   },
 
   async addQuotation(quotation: Partial<Quotation>) {
