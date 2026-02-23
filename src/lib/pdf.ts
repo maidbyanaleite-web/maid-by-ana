@@ -1,10 +1,14 @@
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { format } from 'date-fns';
-import { Service } from '../types';
+import { Service, Settings } from '../types';
 
-export const generateReceiptPDF = (services: Service[], type: 'single' | 'biweekly' | 'monthly') => {
+export const generateReceiptPDF = (services: Service[], type: 'single' | 'biweekly' | 'monthly', settings?: Settings) => {
   const doc = new jsPDF() as any;
+  const companyName = settings?.company_name || 'Maid By Ana';
+  const companySubtitle = settings?.company_subtitle || 'Professional Cleaning Services';
+  const companyAddress = settings?.company_address || '';
+
   const primaryColor = [13, 45, 58]; // Teal 900
   const accentColor = [212, 175, 55]; // Gold 500
 
@@ -14,10 +18,14 @@ export const generateReceiptPDF = (services: Service[], type: 'single' | 'biweek
   
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(24);
-  doc.text('Maid By Ana', 20, 25);
+  doc.text(companyName, 20, 25);
   
   doc.setFontSize(10);
-  doc.text('Professional Cleaning Services', 20, 32);
+  doc.text(companySubtitle, 20, 32);
+  if (companyAddress) {
+    doc.setFontSize(8);
+    doc.text(companyAddress, 20, 37);
+  }
 
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(18);
@@ -51,8 +59,8 @@ export const generateReceiptPDF = (services: Service[], type: 'single' | 'biweek
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
-  doc.text('Thank you for choosing Maid By Ana!', 20, finalY + 30);
+  doc.text(`Thank you for choosing ${companyName}!`, 20, finalY + 30);
   doc.text('For any questions, please contact us.', 20, finalY + 35);
 
-  doc.save(`MaidByAna_Receipt_${format(new Date(), 'yyyyMMdd')}.pdf`);
+  doc.save(`${companyName.replace(/\s+/g, '')}_Receipt_${format(new Date(), 'yyyyMMdd')}.pdf`);
 };

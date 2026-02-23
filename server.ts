@@ -71,6 +71,17 @@ try {
       is_read INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS settings (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      company_name TEXT DEFAULT 'Maid By Ana',
+      company_subtitle TEXT DEFAULT 'Cleaning Management',
+      company_address TEXT DEFAULT '',
+      company_logo TEXT DEFAULT ''
+    );
+
+    -- Insert default settings if not exists
+    INSERT OR IGNORE INTO settings (id, company_name, company_subtitle) VALUES (1, 'Maid By Ana', 'Cleaning Management');
   `);
 } catch (error) {
   console.error("Database initialization failed:", error);
@@ -148,6 +159,21 @@ async function startServer() {
       VALUES (?, ?, ?, ?)
     `).run(client_name, type, JSON.stringify(details), total);
     res.json({ id: info.lastInsertRowid });
+  });
+
+  app.get("/api/settings", (req, res) => {
+    const settings = db.prepare("SELECT * FROM settings WHERE id = 1").get();
+    res.json(settings);
+  });
+
+  app.post("/api/settings", (req, res) => {
+    const { company_name, company_subtitle, company_address, company_logo } = req.body;
+    db.prepare(`
+      UPDATE settings 
+      SET company_name = ?, company_subtitle = ?, company_address = ?, company_logo = ?
+      WHERE id = 1
+    `).run(company_name, company_subtitle, company_address, company_logo);
+    res.json({ status: "ok" });
   });
 
   app.get("/api/notifications", (req, res) => {

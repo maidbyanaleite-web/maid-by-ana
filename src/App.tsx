@@ -24,7 +24,12 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Menu,
-  X
+  X,
+  Settings as SettingsIcon,
+  Upload,
+  Camera,
+  MessageSquare,
+  ClipboardCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';
@@ -42,7 +47,7 @@ import {
   Bar,
   Legend
 } from 'recharts';
-import { Client, Service, Quotation, UserRole, Notification, Language } from './types';
+import { Client, Service, Quotation, UserRole, Notification, Language, Settings } from './types';
 import { cn, formatCurrency } from './lib/utils';
 import { generateReceiptPDF } from './lib/pdf';
 import { translations } from './translations';
@@ -59,9 +64,15 @@ export default function App() {
   const [services, setServices] = useState<Service[]>([]);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [settings, setSettings] = useState<Settings>({
+    company_name: 'Maid By Ana',
+    company_subtitle: 'Cleaning Management',
+    company_address: ''
+  });
   const [showNotifications, setShowNotifications] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [activeInspection, setActiveInspection] = useState<{ serviceId: string, clientId: string | number } | null>(null);
 
   const isFirebaseEnabled = !!(import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAM4K96HLPce8iRkcVZVWc3uS_T5c0gTX8");
 
@@ -87,23 +98,27 @@ export default function App() {
     setIsLoading(true);
     try {
       if (isFirebaseEnabled) {
-        const [c, s, q] = await Promise.all([
+        const [c, s, q, st] = await Promise.all([
           firebaseService.getClients(),
           firebaseService.getServices(),
-          firebaseService.getQuotations()
+          firebaseService.getQuotations(),
+          firebaseService.getSettings()
         ]);
         setClients(c);
         setServices(s);
         setQuotations(q);
+        setSettings(st);
       } else {
-        const [clientsRes, servicesRes, quotationsRes] = await Promise.all([
+        const [clientsRes, servicesRes, quotationsRes, settingsRes] = await Promise.all([
           fetch('/api/clients'),
           fetch('/api/services'),
-          fetch('/api/quotations')
+          fetch('/api/quotations'),
+          fetch('/api/settings')
         ]);
         setClients(await clientsRes.json());
         setServices(await servicesRes.json());
         setQuotations(await quotationsRes.json());
+        setSettings(await settingsRes.json());
         await fetchNotifications();
       }
     } catch (error) {
@@ -192,10 +207,14 @@ export default function App() {
       {/* Mobile Header */}
       <div className="lg:hidden bg-teal-900 text-white p-4 flex items-center justify-between sticky top-0 z-50 shadow-md">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-gold-500 rounded flex items-center justify-center">
-            <Home className="text-teal-900" size={18} />
+          <div className="w-8 h-8 bg-gold-500 rounded flex items-center justify-center overflow-hidden">
+            {settings.company_logo ? (
+              <img src={settings.company_logo} alt="Logo" className="w-full h-full object-cover" />
+            ) : (
+              <Home className="text-teal-900" size={18} />
+            )}
           </div>
-          <h1 className="font-bold text-base">Maid By Ana</h1>
+          <h1 className="font-bold text-base">{settings.company_name}</h1>
         </div>
         <button 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -224,12 +243,16 @@ export default function App() {
         isSidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="p-6 hidden lg:flex items-center gap-3 border-b border-white/10">
-          <div className="w-10 h-10 bg-gold-500 rounded-lg flex items-center justify-center">
-            <Home className="text-teal-900" size={24} />
+          <div className="w-10 h-10 bg-gold-500 rounded-lg flex items-center justify-center overflow-hidden">
+            {settings.company_logo ? (
+              <img src={settings.company_logo} alt="Logo" className="w-full h-full object-cover" />
+            ) : (
+              <Home className="text-teal-900" size={24} />
+            )}
           </div>
           <div>
-            <h1 className="font-bold text-lg leading-tight">Maid By Ana</h1>
-            <p className="text-xs text-white/60">Cleaning Management</p>
+            <h1 className="font-bold text-lg leading-tight">{settings.company_name}</h1>
+            <p className="text-xs text-white/60">{settings.company_subtitle}</p>
           </div>
         </div>
 
@@ -259,12 +282,20 @@ export default function App() {
             onClick={() => { setActiveTab('quotation'); setIsSidebarOpen(false); }} 
           />
           {role === 'admin' && (
-            <NavItem 
-              icon={<BarChart3 size={20} />} 
-              label={t.reports} 
-              active={activeTab === 'reports'} 
-              onClick={() => { setActiveTab('reports'); setIsSidebarOpen(false); }} 
-            />
+            <>
+              <NavItem 
+                icon={<BarChart3 size={20} />} 
+                label={t.reports} 
+                active={activeTab === 'reports'} 
+                onClick={() => { setActiveTab('reports'); setIsSidebarOpen(false); }} 
+              />
+              <NavItem 
+                icon={<SettingsIcon size={20} />} 
+                label={t.settings} 
+                active={activeTab === 'settings'} 
+                onClick={() => { setActiveTab('settings'); setIsSidebarOpen(false); }} 
+              />
+            </>
           )}
         </nav>
 
@@ -367,6 +398,7 @@ export default function App() {
                 services={services} 
                 onMarkPaid={markAsPaid}
                 t={t}
+                settings={settings}
               />
             )}
             {activeTab === 'clients' && (
@@ -375,6 +407,7 @@ export default function App() {
                 clients={clients} 
                 onAddClient={addClient} 
                 t={t}
+                settings={settings}
               />
             )}
             {activeTab === 'services' && (
@@ -385,6 +418,7 @@ export default function App() {
                 onAddService={addService}
                 onMarkPaid={markAsPaid}
                 t={t}
+                settings={settings}
               />
             )}
             {activeTab === 'quotation' && (
@@ -402,10 +436,29 @@ export default function App() {
                   fetchData();
                 }}
                 t={t}
+                settings={settings}
               />
             )}
             {activeTab === 'reports' && role === 'admin' && (
-              <ReportsView t={t} />
+              <ReportsView t={t} settings={settings} />
+            )}
+            {activeTab === 'settings' && role === 'admin' && (
+              <SettingsView 
+                settings={settings} 
+                onSave={async (s) => {
+                  if (isFirebaseEnabled) {
+                    await firebaseService.updateSettings(s);
+                  } else {
+                    await fetch('/api/settings', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(s)
+                    });
+                  }
+                  fetchData();
+                }}
+                t={t} 
+              />
             )}
           </motion.div>
         </AnimatePresence>
@@ -431,7 +484,7 @@ function NavItem({ icon, label, active, onClick }: { icon: React.ReactNode, labe
   );
 }
 
-function Dashboard({ role, clients, services, onMarkPaid, t }: { role: UserRole, clients: Client[], services: Service[], onMarkPaid: (id: number | string) => void, t: any }) {
+function Dashboard({ role, clients, services, onMarkPaid, t, settings }: { role: UserRole, clients: Client[], services: Service[], onMarkPaid: (id: number | string) => void, t: any, settings: Settings }) {
   const pendingServices = services.filter(s => s.payment_status === 'pending');
   const todayServices = services.filter(s => s.date === format(new Date(), 'yyyy-MM-dd'));
   
@@ -444,7 +497,7 @@ function Dashboard({ role, clients, services, onMarkPaid, t }: { role: UserRole,
       <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <h2 className="text-2xl md:text-3xl font-bold text-teal-900">{t.welcome}, {role === 'admin' ? 'Ana' : t.staff}!</h2>
-          <p className="text-slate-500">Maid By Ana.</p>
+          <p className="text-slate-500">{settings.company_name}.</p>
         </div>
         <div className="text-left md:text-right">
           <p className="text-xs md:text-sm font-medium text-slate-400 uppercase tracking-wider">{format(new Date(), 'EEEE')}</p>
@@ -505,7 +558,7 @@ function Dashboard({ role, clients, services, onMarkPaid, t }: { role: UserRole,
               {t.pendingPayments}
             </h3>
             <button 
-              onClick={() => generateReceiptPDF(pendingServices, 'monthly')}
+              onClick={() => generateReceiptPDF(pendingServices, 'monthly', settings)}
               className="text-xs text-teal-700 hover:underline flex items-center gap-1"
             >
               <Download size={14} /> {t.exportReport}
@@ -558,7 +611,7 @@ function StatCard({ title, value, icon, color }: { title: string, value: string,
   );
 }
 
-function ClientsView({ role, clients, onAddClient, t }: { role: UserRole, clients: Client[], onAddClient: (c: Partial<Client>) => void, t: any }) {
+function ClientsView({ role, clients, onAddClient, t, settings }: { role: UserRole, clients: Client[], onAddClient: (c: Partial<Client>) => void, t: any, settings: Settings }) {
   const [showAdd, setShowAdd] = useState(false);
   const [filter, setFilter] = useState<'all' | 'regular' | 'airbnb'>('all');
   const [search, setSearch] = useState('');
@@ -575,7 +628,7 @@ function ClientsView({ role, clients, onAddClient, t }: { role: UserRole, client
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-teal-900">{t.clients}</h2>
-          <p className="text-slate-500">Maid By Ana.</p>
+          <p className="text-slate-500">{settings.company_name}.</p>
         </div>
         {role === 'admin' && (
           <button 
@@ -681,7 +734,7 @@ function ClientCard({ client, role, t }: { client: Client, role: UserRole, t: an
   );
 }
 
-function QuotationView({ onSave, t }: { onSave: (q: any) => void, t: any }) {
+function QuotationView({ onSave, t, settings }: { onSave: (q: any) => void, t: any, settings: Settings }) {
   const [type, setType] = useState<'hourly' | 'detailed'>('hourly');
   const [clientName, setClientName] = useState('');
   
@@ -737,7 +790,7 @@ function QuotationView({ onSave, t }: { onSave: (q: any) => void, t: any }) {
     <div className="max-w-4xl mx-auto space-y-8">
       <header>
         <h2 className="text-2xl font-bold text-teal-900">{t.quotation}</h2>
-        <p className="text-slate-500">Maid By Ana.</p>
+        <p className="text-slate-500">{settings.company_name}.</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -883,7 +936,7 @@ function ToggleButton({ label, active, onClick }: { label: string, active: boole
   );
 }
 
-function ServicesView({ role, services, clients, onAddService, onMarkPaid, t }: { role: UserRole, services: Service[], clients: Client[], onAddService: (s: any) => void, onMarkPaid: (id: number | string) => void, t: any }) {
+function ServicesView({ role, services, clients, onAddService, onMarkPaid, t, settings }: { role: UserRole, services: Service[], clients: Client[], onAddService: (s: any) => void, onMarkPaid: (id: number | string) => void, t: any, settings: Settings }) {
   const [showAdd, setShowAdd] = useState(false);
   
   return (
@@ -891,7 +944,7 @@ function ServicesView({ role, services, clients, onAddService, onMarkPaid, t }: 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-teal-900">{t.services}</h2>
-          <p className="text-slate-500">Maid By Ana.</p>
+          <p className="text-slate-500">{settings.company_name}.</p>
         </div>
         {role === 'admin' && (
           <button 
@@ -941,7 +994,7 @@ function ServicesView({ role, services, clients, onAddService, onMarkPaid, t }: 
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
                     <button 
-                      onClick={() => generateReceiptPDF([service], 'single')}
+                      onClick={() => generateReceiptPDF([service], 'single', settings)}
                       className="p-2 text-slate-400 hover:text-teal-900 hover:bg-slate-100 rounded-lg"
                     >
                       <Download size={18} />
@@ -1149,7 +1202,7 @@ function ServiceModal({ clients, onClose, onSave, t }: { clients: Client[], onCl
   );
 }
 
-function ReportsView({ t }: { t: any }) {
+function ReportsView({ t, settings }: { t: any, settings: Settings }) {
   const [range, setRange] = useState<'week' | 'month' | 'custom'>('month');
   const [customStart, setCustomStart] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'));
   const [customEnd, setCustomEnd] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -1188,7 +1241,7 @@ function ReportsView({ t }: { t: any }) {
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-teal-900">{t.financialReports}</h2>
-          <p className="text-slate-500">Maid By Ana.</p>
+          <p className="text-slate-500">{settings.company_name}.</p>
         </div>
         <div className="flex flex-wrap gap-2 p-1 bg-white border border-slate-200 rounded-xl">
           <button 
@@ -1312,6 +1365,371 @@ function ReportStatCard({ title, value, trend, color }: { title: string, value: 
           {trend}
         </div>
       </div>
+    </div>
+  );
+}
+
+function SettingsView({ settings, onSave, t }: { settings: Settings, onSave: (s: Settings) => void, t: any }) {
+  const [formData, setFormData] = useState<Settings>(settings);
+
+  useEffect(() => {
+    setFormData(settings);
+  }, [settings]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave(formData);
+    alert('Settings saved successfully!');
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, company_logo: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-8">
+      <header>
+        <h2 className="text-2xl font-bold text-teal-900">{t.settings}</h2>
+        <p className="text-slate-500">{formData.company_name}.</p>
+      </header>
+
+      <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="flex flex-col items-center gap-4 mb-8">
+            <div className="w-32 h-32 bg-slate-100 rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden relative group">
+              {formData.company_logo ? (
+                <img src={formData.company_logo} alt="Logo Preview" className="w-full h-full object-cover" />
+              ) : (
+                <ImageIcon className="text-slate-300" size={48} />
+              )}
+              <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
+                <Upload className="text-white" size={24} />
+                <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+              </label>
+            </div>
+            <p className="text-xs font-bold text-slate-400 uppercase">{t.companyLogo}</p>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t.companyName}</label>
+              <input 
+                type="text" 
+                value={formData.company_name} 
+                onChange={e => setFormData({ ...formData, company_name: e.target.value })}
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-900/10 outline-none"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t.companySubtitle}</label>
+              <input 
+                type="text" 
+                value={formData.company_subtitle} 
+                onChange={e => setFormData({ ...formData, company_subtitle: e.target.value })}
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-900/10 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t.companyAddress}</label>
+              <textarea 
+                value={formData.company_address} 
+                onChange={e => setFormData({ ...formData, company_address: e.target.value })}
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-900/10 outline-none h-24"
+              />
+            </div>
+          </div>
+
+          <button 
+            type="submit" 
+            className="w-full py-4 bg-teal-900 text-white rounded-2xl font-bold hover:bg-teal-800 transition-colors shadow-lg shadow-teal-900/20"
+          >
+            {t.saveSettings}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function PhotoUpload({ onUpload, label, t }: { onUpload: (url: string) => void, label: string, t: any }) {
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const path = `inspections/${Date.now()}_${file.name}`;
+        const url = await firebaseService.uploadImage(file, path);
+        onUpload(url);
+      }
+    } catch (error) {
+      console.error("Upload failed:", error);
+      alert("Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-200 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer relative">
+      {uploading ? (
+        <div className="flex flex-col items-center gap-2">
+          <div className="w-6 h-6 border-2 border-teal-900 border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs font-bold text-slate-400 uppercase">Uploading...</span>
+        </div>
+      ) : (
+        <>
+          <Camera className="text-slate-300 mb-2" size={24} />
+          <span className="text-xs font-bold text-slate-400 uppercase">{label}</span>
+        </>
+      )}
+      <input type="file" accept="image/*" multiple onChange={handleFileChange} className="hidden" disabled={uploading} />
+    </label>
+  );
+}
+
+function InspectionView({ serviceId, clientId, role, onClose, t }: { serviceId: string, clientId: string | number, role: UserRole, onClose: () => void, t: any }) {
+  const [report, setReport] = useState<InspectionReport | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'check-in' | 'check-out' | 'audit'>('check-in');
+
+  useEffect(() => {
+    const unsub = firebaseService.subscribeInspectionReport(serviceId, (data) => {
+      if (data) {
+        setReport(data);
+      } else {
+        // Create initial report
+        const initialReport: Partial<InspectionReport> = {
+          service_id: serviceId,
+          client_id: clientId,
+          check_in_photos: [],
+          check_out_photos: [
+            { category: t.rooms, photos: [] },
+            { category: t.kitchen, photos: [] },
+            { category: t.bathroom, photos: [] },
+            { category: t.specialAreas, photos: [] }
+          ],
+          audit_photos: [],
+          status: 'in_progress'
+        };
+        firebaseService.saveInspectionReport(initialReport);
+      }
+      setLoading(false);
+    });
+    return () => unsub();
+  }, [serviceId, clientId, t]);
+
+  const handleAddPhoto = async (url: string, type: 'check-in' | 'check-out' | 'audit', categoryIndex?: number) => {
+    if (!report) return;
+
+    const newPhoto: InspectionPhoto = {
+      url,
+      timestamp: new Date().toISOString()
+    };
+
+    const updatedReport = { ...report };
+    if (type === 'check-in') {
+      updatedReport.check_in_photos = [...updatedReport.check_in_photos, newPhoto];
+    } else if (type === 'check-out' && categoryIndex !== undefined) {
+      updatedReport.check_out_photos[categoryIndex].photos = [
+        ...updatedReport.check_out_photos[categoryIndex].photos,
+        newPhoto
+      ];
+    } else if (type === 'audit') {
+      updatedReport.audit_photos = [...updatedReport.audit_photos, newPhoto];
+    }
+
+    await firebaseService.saveInspectionReport(updatedReport);
+  };
+
+  const handleUpdatePhoto = async (type: 'check-in' | 'check-out' | 'audit', index: number, data: Partial<InspectionPhoto>, categoryIndex?: number) => {
+    if (!report) return;
+    const updatedReport = { ...report };
+    
+    if (type === 'check-in') {
+      updatedReport.check_in_photos[index] = { ...updatedReport.check_in_photos[index], ...data };
+    } else if (type === 'check-out' && categoryIndex !== undefined) {
+      updatedReport.check_out_photos[categoryIndex].photos[index] = { 
+        ...updatedReport.check_out_photos[categoryIndex].photos[index], 
+        ...data 
+      };
+    } else if (type === 'audit') {
+      updatedReport.audit_photos[index] = { ...updatedReport.audit_photos[index], ...data };
+    }
+
+    await firebaseService.saveInspectionReport(updatedReport);
+  };
+
+  if (loading) return (
+    <div className="fixed inset-0 bg-white z-[60] flex items-center justify-center">
+      <div className="w-12 h-12 border-4 border-teal-900 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 bg-white z-[60] flex flex-col overflow-hidden">
+      <header className="bg-teal-900 text-white p-4 flex items-center justify-between shadow-lg">
+        <div className="flex items-center gap-4">
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+            <X size={24} />
+          </button>
+          <div>
+            <h2 className="font-bold text-lg">{t.inspectionReport}</h2>
+            <p className="text-xs text-white/60">Service ID: {serviceId}</p>
+          </div>
+        </div>
+        {report?.status === 'in_progress' && role === 'staff' && (
+          <button 
+            onClick={async () => {
+              if (report) {
+                await firebaseService.saveInspectionReport({ ...report, status: 'completed' });
+                onClose();
+              }
+            }}
+            className="bg-gold-500 text-teal-900 px-4 py-2 rounded-xl font-bold text-sm shadow-lg shadow-gold-500/20"
+          >
+            {t.finishInspection}
+          </button>
+        )}
+      </header>
+
+      <div className="flex border-b border-slate-200 bg-slate-50">
+        <button 
+          onClick={() => setActiveTab('check-in')}
+          className={cn(
+            "flex-1 py-4 text-sm font-bold transition-all border-b-2",
+            activeTab === 'check-in' ? "border-teal-900 text-teal-900 bg-white" : "border-transparent text-slate-400"
+          )}
+        >
+          {t.checkIn}
+        </button>
+        <button 
+          onClick={() => setActiveTab('check-out')}
+          className={cn(
+            "flex-1 py-4 text-sm font-bold transition-all border-b-2",
+            activeTab === 'check-out' ? "border-teal-900 text-teal-900 bg-white" : "border-transparent text-slate-400"
+          )}
+        >
+          {t.checkOut}
+        </button>
+        <button 
+          onClick={() => setActiveTab('audit')}
+          className={cn(
+            "flex-1 py-4 text-sm font-bold transition-all border-b-2",
+            activeTab === 'audit' ? "border-teal-900 text-teal-900 bg-white" : "border-transparent text-slate-400"
+          )}
+        >
+          {t.audit}
+        </button>
+      </div>
+
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50">
+        <div className="max-w-4xl mx-auto space-y-8">
+          {activeTab === 'check-in' && (
+            <div className="space-y-6">
+              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                <h3 className="text-lg font-bold text-teal-900 mb-4">{t.problemsFound}</h3>
+                {role === 'staff' && report?.status === 'in_progress' && (
+                  <PhotoUpload onUpload={(url) => handleAddPhoto(url, 'check-in')} label={t.addPhoto} t={t} />
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                  {report?.check_in_photos.map((photo, idx) => (
+                    <div key={idx} className="bg-slate-50 rounded-2xl overflow-hidden border border-slate-200 flex flex-col">
+                      <img src={photo.url} alt="Check-in" className="w-full aspect-video object-cover" />
+                      <div className="p-4 space-y-3">
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">{t.comment}</label>
+                          {role === 'staff' && report.status === 'in_progress' ? (
+                            <textarea 
+                              value={photo.comment || ''} 
+                              onChange={(e) => handleUpdatePhoto('check-in', idx, { comment: e.target.value })}
+                              className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-teal-900/10"
+                              placeholder="Describe the issue..."
+                            />
+                          ) : (
+                            <p className="text-sm text-teal-900 bg-white p-2 rounded-lg border border-slate-100">{photo.comment || 'No comment'}</p>
+                          )}
+                        </div>
+                        {(photo.admin_reply || role === 'admin') && (
+                          <div className="pl-4 border-l-2 border-gold-500 bg-gold-50/30 p-2 rounded-r-lg">
+                            <label className="block text-[10px] font-bold text-gold-600 uppercase mb-1">{t.adminReply}</label>
+                            {role === 'admin' ? (
+                              <textarea 
+                                value={photo.admin_reply || ''} 
+                                onChange={(e) => handleUpdatePhoto('check-in', idx, { admin_reply: e.target.value })}
+                                className="w-full p-2 bg-white border border-gold-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gold-500/10"
+                                placeholder="Reply to staff..."
+                              />
+                            ) : (
+                              <p className="text-sm text-teal-900">{photo.admin_reply || 'Waiting for reply...'}</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'check-out' && (
+            <div className="space-y-8">
+              {report?.check_out_photos.map((cat, catIdx) => (
+                <div key={catIdx} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                  <h3 className="text-lg font-bold text-teal-900 mb-4">{cat.category}</h3>
+                  {role === 'staff' && report.status === 'in_progress' && (
+                    <PhotoUpload onUpload={(url) => handleAddPhoto(url, 'check-out', catIdx)} label={`${t.addPhoto} - ${cat.category}`} t={t} />
+                  )}
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-6">
+                    {cat.photos.map((photo, idx) => (
+                      <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 group">
+                        <img src={photo.url} alt="Check-out" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className="text-[10px] text-white font-bold">{format(new Date(photo.timestamp), 'HH:mm')}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {activeTab === 'audit' && (
+            <div className="space-y-6">
+              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                <h3 className="text-lg font-bold text-teal-900 mb-4">{t.auditPhotos}</h3>
+                {role === 'staff' && report?.status === 'in_progress' && (
+                  <PhotoUpload onUpload={(url) => handleAddPhoto(url, 'audit')} label={t.addPhoto} t={t} />
+                )}
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mt-6">
+                  {report?.audit_photos.map((photo, idx) => (
+                    <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 group">
+                      <img src={photo.url} alt="Audit" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="text-[10px] text-white font-bold">{format(new Date(photo.timestamp), 'HH:mm')}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 }

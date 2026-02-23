@@ -13,6 +13,7 @@ export interface Client {
   frequency: string;
   property_link?: string;
   created_at: string;
+  mandatory_photos?: string[];
 }
 
 export interface Service {
@@ -46,5 +47,33 @@ export interface Notification {
   title: string;
   message: string;
   is_read: number;
+  created_at: string;
+}
+
+export interface Settings {
+  company_name: string;
+  company_subtitle: string;
+  company_address: string;
+  company_logo?: string;
+}
+
+export interface InspectionPhoto {
+  url: string;
+  comment?: string;
+  admin_reply?: string;
+  timestamp: string;
+}
+
+export interface InspectionReport {
+  id: string;
+  service_id: string;
+  client_id: string | number;
+  check_in_photos: InspectionPhoto[];
+  check_out_photos: {
+    category: string;
+    photos: InspectionPhoto[];
+  }[];
+  audit_photos: InspectionPhoto[];
+  status: 'in_progress' | 'completed';
   created_at: string;
 }
