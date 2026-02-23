@@ -36,6 +36,7 @@ try {
       phone TEXT,
       frequency TEXT,
       property_link TEXT,
+      mandatory_photos TEXT, -- JSON string array
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -105,16 +106,46 @@ async function startServer() {
   // API Routes
   app.get("/api/clients", (req, res) => {
     const clients = db.prepare("SELECT * FROM clients ORDER BY name ASC").all();
-    res.json(clients);
+    const formattedClients = clients.map((c: any) => ({
+      ...c,
+      mandatory_photos: c.mandatory_photos ? JSON.parse(c.mandatory_photos) : []
+    }));
+    res.json(formattedClients);
   });
 
   app.post("/api/clients", (req, res) => {
-    const { type, name, owner_name, property_name, address, email, phone, frequency, property_link } = req.body;
+    const { type, name, owner_name, property_name, address, email, phone, frequency, property_link, mandatory_photos } = req.body;
     const info = db.prepare(`
-      INSERT INTO clients (type, name, owner_name, property_name, address, email, phone, frequency, property_link)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(type, name, owner_name, property_name, address, email, phone, frequency, property_link);
+      INSERT INTO clients (type, name, owner_name, property_name, address, email, phone, frequency, property_link, mandatory_photos)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(type, name, owner_name, property_name, address, email, phone, frequency, property_link, JSON.stringify(mandatory_photos || []));
     res.json({ id: info.lastInsertRowid });
+  });
+
+  app.patch("/api/clients/:id", (req, res) => {
+    const { id } = req.params;
+    const { type, name, owner_name, property_name, address, email, phone, frequency, property_link, mandatory_photos } = req.body;
+    
+    // Build update query dynamically based on provided fields
+    const updates: string[] = [];
+    const params: any[] = [];
+    
+    if (type) { updates.push("type = ?"); params.push(type); }
+    if (name) { updates.push("name = ?"); params.push(name); }
+    if (owner_name !== undefined) { updates.push("owner_name = ?"); params.push(owner_name); }
+    if (property_name !== undefined) { updates.push("property_name = ?"); params.push(property_name); }
+    if (address) { updates.push("address = ?"); params.push(address); }
+    if (email !== undefined) { updates.push("email = ?"); params.push(email); }
+    if (phone) { updates.push("phone = ?"); params.push(phone); }
+    if (frequency) { updates.push("frequency = ?"); params.push(frequency); }
+    if (property_link !== undefined) { updates.push("property_link = ?"); params.push(property_link); }
+    if (mandatory_photos !== undefined) { updates.push("mandatory_photos = ?"); params.push(JSON.stringify(mandatory_photos)); }
+    
+    if (updates.length === 0) return res.json({ success: true });
+    
+    params.push(id);
+    db.prepare(`UPDATE clients SET ${updates.join(", ")} WHERE id = ?`).run(...params);
+    res.json({ success: true });
   });
 
   app.get("/api/services", (req, res) => {

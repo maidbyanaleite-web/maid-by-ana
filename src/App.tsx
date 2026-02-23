@@ -29,7 +29,8 @@ import {
   Upload,
   Camera,
   MessageSquare,
-  ClipboardCheck
+  ClipboardCheck,
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';
@@ -47,7 +48,7 @@ import {
   Bar,
   Legend
 } from 'recharts';
-import { Client, Service, Quotation, UserRole, Notification, Language, Settings } from './types';
+import { Client, Service, Quotation, UserRole, Notification, Language, Settings, InspectionReport, InspectionPhoto } from './types';
 import { cn, formatCurrency } from './lib/utils';
 import { generateReceiptPDF } from './lib/pdf';
 import { translations } from './translations';
@@ -74,7 +75,7 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeInspection, setActiveInspection] = useState<{ serviceId: string, clientId: string | number } | null>(null);
 
-  const isFirebaseEnabled = !!(import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAM4K96HLPce8iRkcVZVWc3uS_T5c0gTX8");
+  const isFirebaseEnabled = !!import.meta.env.VITE_FIREBASE_API_KEY;
 
   useEffect(() => {
     fetchData();
@@ -156,29 +157,41 @@ export default function App() {
   };
 
   const addClient = async (clientData: Partial<Client>) => {
-    if (isFirebaseEnabled) {
-      await firebaseService.addClient(clientData);
-    } else {
-      await fetch('/api/clients', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(clientData)
-      });
+    try {
+      if (isFirebaseEnabled) {
+        await firebaseService.addClient(clientData);
+      } else {
+        const response = await fetch('/api/clients', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(clientData)
+        });
+        if (!response.ok) throw new Error('Failed to save client to server');
+      }
+      await fetchData();
+    } catch (error) {
+      console.error('Error adding client:', error);
+      alert('Error saving client. Please check your connection and try again.');
     }
-    fetchData();
   };
 
   const addService = async (serviceData: Partial<Service>) => {
-    if (isFirebaseEnabled) {
-      await firebaseService.addService(serviceData);
-    } else {
-      await fetch('/api/services', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(serviceData)
-      });
+    try {
+      if (isFirebaseEnabled) {
+        await firebaseService.addService(serviceData);
+      } else {
+        const response = await fetch('/api/services', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(serviceData)
+        });
+        if (!response.ok) throw new Error('Failed to save service to server');
+      }
+      await fetchData();
+    } catch (error) {
+      console.error('Error adding service:', error);
+      alert('Error saving service. Please check your connection and try again.');
     }
-    fetchData();
   };
 
   const markAsPaid = async (id: string | number) => {
@@ -399,6 +412,7 @@ export default function App() {
                 onMarkPaid={markAsPaid}
                 t={t}
                 settings={settings}
+                onStartInspection={(serviceId, clientId) => setActiveInspection({ serviceId, clientId })}
               />
             )}
             {activeTab === 'clients' && (
@@ -408,6 +422,24 @@ export default function App() {
                 onAddClient={addClient} 
                 t={t}
                 settings={settings}
+                onUpdateClient={async (id, data) => {
+                  try {
+                    if (isFirebaseEnabled) {
+                      await firebaseService.updateClient(id as string, data);
+                    } else {
+                      const response = await fetch(`/api/clients/${id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                      });
+                      if (!response.ok) throw new Error('Failed to update client');
+                    }
+                    await fetchData();
+                  } catch (error) {
+                    console.error('Error updating client:', error);
+                    alert('Error updating client. Please try again.');
+                  }
+                }}
               />
             )}
             {activeTab === 'services' && (
@@ -419,6 +451,7 @@ export default function App() {
                 onMarkPaid={markAsPaid}
                 t={t}
                 settings={settings}
+                onStartInspection={(serviceId, clientId) => setActiveInspection({ serviceId, clientId })}
               />
             )}
             {activeTab === 'quotation' && (
@@ -463,6 +496,16 @@ export default function App() {
           </motion.div>
         </AnimatePresence>
       </main>
+
+      {activeInspection && (
+        <InspectionView 
+          serviceId={activeInspection.serviceId} 
+          clientId={activeInspection.clientId} 
+          role={role} 
+          onClose={() => setActiveInspection(null)} 
+          t={t} 
+        />
+      )}
     </div>
   );
 }
@@ -484,7 +527,7 @@ function NavItem({ icon, label, active, onClick }: { icon: React.ReactNode, labe
   );
 }
 
-function Dashboard({ role, clients, services, onMarkPaid, t, settings }: { role: UserRole, clients: Client[], services: Service[], onMarkPaid: (id: number | string) => void, t: any, settings: Settings }) {
+function Dashboard({ role, clients, services, onMarkPaid, t, settings, onStartInspection }: { role: UserRole, clients: Client[], services: Service[], onMarkPaid: (id: number | string) => void, t: any, settings: Settings, onStartInspection: (serviceId: string, clientId: string | number) => void }) {
   const pendingServices = services.filter(s => s.payment_status === 'pending');
   const todayServices = services.filter(s => s.date === format(new Date(), 'yyyy-MM-dd'));
   
@@ -538,9 +581,18 @@ function Dashboard({ role, clients, services, onMarkPaid, t, settings }: { role:
                   <p className="font-bold text-teal-900">{service.client_name}</p>
                   <p className="text-xs text-slate-500">{service.service_type}</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-teal-900">{formatCurrency(role === 'admin' ? service.service_value : service.staff_value)}</p>
-                  <p className="text-[10px] text-slate-400 uppercase font-bold">{role === 'admin' ? t.revenue : t.staffPay}</p>
+                <div className="text-right flex items-center gap-3">
+                  <div>
+                    <p className="text-sm font-bold text-teal-900">{formatCurrency(role === 'admin' ? service.service_value : service.staff_value)}</p>
+                    <p className="text-[10px] text-slate-400 uppercase font-bold">{role === 'admin' ? t.revenue : t.staffPay}</p>
+                  </div>
+                  <button 
+                    onClick={() => onStartInspection(service.id.toString(), service.client_id)}
+                    className="p-2 bg-teal-900 text-white rounded-lg hover:bg-teal-800 transition-colors"
+                    title={t.inspectionReport}
+                  >
+                    <ClipboardCheck size={18} />
+                  </button>
                 </div>
               </div>
             )) : (
@@ -611,8 +663,9 @@ function StatCard({ title, value, icon, color }: { title: string, value: string,
   );
 }
 
-function ClientsView({ role, clients, onAddClient, t, settings }: { role: UserRole, clients: Client[], onAddClient: (c: Partial<Client>) => void, t: any, settings: Settings }) {
+function ClientsView({ role, clients, onAddClient, t, settings, onUpdateClient }: { role: UserRole, clients: Client[], onAddClient: (c: Partial<Client>) => void, t: any, settings: Settings, onUpdateClient: (id: string | number, data: Partial<Client>) => void }) {
   const [showAdd, setShowAdd] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [filter, setFilter] = useState<'all' | 'regular' | 'airbnb'>('all');
   const [search, setSearch] = useState('');
 
@@ -660,12 +713,24 @@ function ClientsView({ role, clients, onAddClient, t, settings }: { role: UserRo
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredClients.map(client => (
-          <ClientCard key={client.id} client={client} role={role} t={t} />
+          <ClientCard key={client.id} client={client} role={role} t={t} onEdit={() => setEditingClient(client)} />
         ))}
       </div>
 
       {showAdd && (
         <ClientModal onClose={() => setShowAdd(false)} onSave={onAddClient} t={t} />
+      )}
+
+      {editingClient && (
+        <ClientModal 
+          onClose={() => setEditingClient(null)} 
+          onSave={(data) => {
+            onUpdateClient(editingClient.id, data);
+            setEditingClient(null);
+          }} 
+          t={t} 
+          initialData={editingClient}
+        />
       )}
     </div>
   );
@@ -685,7 +750,7 @@ function FilterButton({ children, active, onClick }: { children: React.ReactNode
   );
 }
 
-function ClientCard({ client, role, t }: { client: Client, role: UserRole, t: any, key?: React.Key }) {
+function ClientCard({ client, role, t, onEdit }: { client: Client, role: UserRole, t: any, onEdit: () => void, key?: React.Key }) {
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow group">
       <div className="flex justify-between items-start mb-4">
@@ -723,7 +788,12 @@ function ClientCard({ client, role, t }: { client: Client, role: UserRole, t: an
       </div>
 
       <div className="mt-6 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button className="flex-1 bg-slate-900 text-white text-xs font-bold py-2 rounded-lg hover:bg-black">{t.viewDetails}</button>
+        <button 
+          onClick={onEdit}
+          className="flex-1 bg-slate-900 text-white text-xs font-bold py-2 rounded-lg hover:bg-black"
+        >
+          {role === 'admin' ? t.edit : t.viewDetails}
+        </button>
         {client.type === 'airbnb' && client.property_link && (
           <a href={client.property_link} target="_blank" rel="noreferrer" className="p-2 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100">
             <Building2 size={16} />
@@ -754,9 +824,11 @@ function QuotationView({ onSave, t, settings }: { onSave: (q: any) => void, t: a
 
   const calculateTotal = () => {
     if (type === 'hourly') {
-      let total = hours * hourlyRate;
-      if (hasPets) total += 15;
-      return total;
+      const standardRate = 45;
+      const premiumRate = 55;
+      const hasExtras = hasPets || fridge || oven;
+      const currentRate = hasExtras ? premiumRate : standardRate;
+      return hours * currentRate;
     } else {
       let total = 50; // Base fee
       total += rooms * 25;
@@ -774,7 +846,7 @@ function QuotationView({ onSave, t, settings }: { onSave: (q: any) => void, t: a
 
   const handleSave = () => {
     const details = type === 'hourly' 
-      ? { hours, hourlyRate, hasPets } 
+      ? { hours, hasPets, fridge, oven } 
       : { rooms, bathrooms, stairs, windows, blinds, fridge, oven };
     
     onSave({
@@ -824,33 +896,68 @@ function QuotationView({ onSave, t, settings }: { onSave: (q: any) => void, t: a
               </div>
 
               {type === 'hourly' ? (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t.hours}</label>
+                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t.hours} (House Size)</label>
                     <input 
                       type="number" 
                       value={hours}
                       onChange={(e) => setHours(Number(e.target.value))}
-                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl"
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-900/10"
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t.rate} ($)</label>
-                    <input 
-                      type="number" 
-                      value={hourlyRate}
-                      onChange={(e) => setHourlyRate(Number(e.target.value))}
-                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl"
-                    />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className={cn(
+                      "flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer",
+                      hasPets ? "bg-amber-50 border-amber-200" : "bg-slate-50 border-slate-200"
+                    )} onClick={() => setHasPets(!hasPets)}>
+                      <input 
+                        type="checkbox" 
+                        checked={hasPets}
+                        onChange={() => {}} 
+                        className="w-5 h-5 accent-amber-600"
+                      />
+                      <span className={cn("text-sm font-bold", hasPets ? "text-amber-900" : "text-slate-500")}>{t.pets}</span>
+                    </div>
+
+                    <div className={cn(
+                      "flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer",
+                      fridge ? "bg-blue-50 border-blue-200" : "bg-slate-50 border-slate-200"
+                    )} onClick={() => setFridge(!fridge)}>
+                      <input 
+                        type="checkbox" 
+                        checked={fridge}
+                        onChange={() => {}} 
+                        className="w-5 h-5 accent-blue-600"
+                      />
+                      <span className={cn("text-sm font-bold", fridge ? "text-blue-900" : "text-slate-500")}>{t.fridge}</span>
+                    </div>
+
+                    <div className={cn(
+                      "flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer",
+                      oven ? "bg-orange-50 border-orange-200" : "bg-slate-50 border-slate-200"
+                    )} onClick={() => setOven(!oven)}>
+                      <input 
+                        type="checkbox" 
+                        checked={oven}
+                        onChange={() => {}} 
+                        className="w-5 h-5 accent-orange-600"
+                      />
+                      <span className={cn("text-sm font-bold", oven ? "text-orange-900" : "text-slate-500")}>{t.oven}</span>
+                    </div>
                   </div>
-                  <div className="col-span-2 flex items-center gap-3 p-3 bg-amber-50 rounded-xl border border-amber-100">
-                    <input 
-                      type="checkbox" 
-                      checked={hasPets}
-                      onChange={(e) => setHasPets(e.target.checked)}
-                      className="w-5 h-5 accent-amber-600"
-                    />
-                    <span className="text-sm font-medium text-amber-900">{t.pets} (+$15)</span>
+
+                  <div className="p-4 bg-teal-50 rounded-xl border border-teal-100">
+                    <p className="text-xs font-bold text-teal-900 uppercase mb-1">Current Rate</p>
+                    <p className="text-lg font-bold text-teal-900">
+                      ${(hasPets || fridge || oven) ? '55.00' : '45.00'} / hour
+                    </p>
+                    <p className="text-[10px] text-teal-600 mt-1">
+                      {(hasPets || fridge || oven) 
+                        ? "Premium rate applied due to extras (Pets/Fridge/Oven)." 
+                        : "Standard rate applied for basic Deep Clean."}
+                    </p>
                   </div>
                 </div>
               ) : (
@@ -936,7 +1043,7 @@ function ToggleButton({ label, active, onClick }: { label: string, active: boole
   );
 }
 
-function ServicesView({ role, services, clients, onAddService, onMarkPaid, t, settings }: { role: UserRole, services: Service[], clients: Client[], onAddService: (s: any) => void, onMarkPaid: (id: number | string) => void, t: any, settings: Settings }) {
+function ServicesView({ role, services, clients, onAddService, onMarkPaid, t, settings, onStartInspection }: { role: UserRole, services: Service[], clients: Client[], onAddService: (s: any) => void, onMarkPaid: (id: number | string) => void, t: any, settings: Settings, onStartInspection: (serviceId: string, clientId: string | number) => void }) {
   const [showAdd, setShowAdd] = useState(false);
   
   return (
@@ -994,6 +1101,13 @@ function ServicesView({ role, services, clients, onAddService, onMarkPaid, t, se
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
                     <button 
+                      onClick={() => onStartInspection(service.id.toString(), service.client_id)}
+                      className="p-2 text-slate-400 hover:text-teal-900 hover:bg-slate-100 rounded-lg"
+                      title={t.inspectionReport}
+                    >
+                      <ClipboardCheck size={18} />
+                    </button>
+                    <button 
                       onClick={() => generateReceiptPDF([service], 'single', settings)}
                       className="p-2 text-slate-400 hover:text-teal-900 hover:bg-slate-100 rounded-lg"
                     >
@@ -1023,8 +1137,8 @@ function ServicesView({ role, services, clients, onAddService, onMarkPaid, t, se
   );
 }
 
-function ClientModal({ onClose, onSave, t }: { onClose: () => void, onSave: (c: any) => void, t: any }) {
-  const [formData, setFormData] = useState({
+function ClientModal({ onClose, onSave, t, initialData }: { onClose: () => void, onSave: (c: any) => void, t: any, initialData?: Client }) {
+  const [formData, setFormData] = useState<Partial<Client>>(initialData || {
     type: 'regular',
     name: '',
     owner_name: '',
@@ -1033,8 +1147,11 @@ function ClientModal({ onClose, onSave, t }: { onClose: () => void, onSave: (c: 
     email: '',
     phone: '',
     frequency: 'biweekly',
-    property_link: ''
+    property_link: '',
+    mandatory_photos: []
   });
+
+  const [newMandatoryPhoto, setNewMandatoryPhoto] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1050,7 +1167,7 @@ function ClientModal({ onClose, onSave, t }: { onClose: () => void, onSave: (c: 
         className="bg-white w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl"
       >
         <div className="bg-teal-900 p-6 text-white flex justify-between items-center">
-          <h3 className="text-xl font-bold">{t.addClient}</h3>
+          <h3 className="text-xl font-bold">{initialData ? t.edit : t.addClient}</h3>
           <button onClick={onClose} className="text-white/60 hover:text-white">✕</button>
         </div>
         <form onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[80vh] overflow-y-auto">
@@ -1114,11 +1231,57 @@ function ClientModal({ onClose, onSave, t }: { onClose: () => void, onSave: (c: 
                 <input type="url" value={formData.property_link} onChange={e => setFormData({...formData, property_link: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl" />
               </div>
             )}
+            <div className="md:col-span-2">
+              <label className="block text-xs font-bold text-slate-400 uppercase mb-1">{t.mandatoryPhotos}</label>
+              <div className="flex gap-2 mb-2">
+                <input 
+                  type="text" 
+                  value={newMandatoryPhoto} 
+                  onChange={e => setNewMandatoryPhoto(e.target.value)}
+                  placeholder="Ex: Baseboard, Air Vent..."
+                  className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl"
+                />
+                <button 
+                  type="button"
+                  onClick={() => {
+                    if (newMandatoryPhoto.trim()) {
+                      setFormData({
+                        ...formData,
+                        mandatory_photos: [...(formData.mandatory_photos || []), newMandatoryPhoto.trim()]
+                      });
+                      setNewMandatoryPhoto('');
+                    }
+                  }}
+                  className="px-4 bg-teal-900 text-white rounded-xl font-bold"
+                >
+                  <Plus size={20} />
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {formData.mandatory_photos?.map((photo, idx) => (
+                  <span key={idx} className="px-3 py-1 bg-teal-50 text-teal-700 text-xs font-bold rounded-full flex items-center gap-2">
+                    {photo}
+                    <button 
+                      type="button"
+                      onClick={() => setFormData({
+                        ...formData,
+                        mandatory_photos: formData.mandatory_photos?.filter((_, i) => i !== idx)
+                      })}
+                      className="hover:text-rose-500"
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="pt-6 border-t border-slate-100 flex gap-4">
             <button type="button" onClick={onClose} className="flex-1 py-3 border border-slate-200 rounded-xl font-bold text-slate-500 hover:bg-slate-50">Cancel</button>
-            <button type="submit" className="flex-1 py-3 bg-teal-900 text-white rounded-xl font-bold hover:bg-teal-800 shadow-lg shadow-teal-900/20">{t.addClient}</button>
+            <button type="submit" className="flex-1 py-3 bg-teal-900 text-white rounded-xl font-bold hover:bg-teal-800 shadow-lg shadow-teal-900/20">
+              {initialData ? t.edit : t.addClient}
+            </button>
           </div>
         </form>
       </motion.div>
@@ -1502,10 +1665,19 @@ function PhotoUpload({ onUpload, label, t }: { onUpload: (url: string) => void, 
 
 function InspectionView({ serviceId, clientId, role, onClose, t }: { serviceId: string, clientId: string | number, role: UserRole, onClose: () => void, t: any }) {
   const [report, setReport] = useState<InspectionReport | null>(null);
+  const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'check-in' | 'check-out' | 'audit'>('check-in');
+  const [activeTab, setActiveTab] = useState<'check-in' | 'check-out' | 'audit' | 'checklist'>('check-in');
+  const [newExtraPhoto, setNewExtraPhoto] = useState('');
 
   useEffect(() => {
+    const fetchClient = async () => {
+      const clients = await firebaseService.getClients();
+      const found = clients.find(c => c.id === clientId);
+      if (found) setClient(found);
+    };
+    fetchClient();
+
     const unsub = firebaseService.subscribeInspectionReport(serviceId, (data) => {
       if (data) {
         setReport(data);
@@ -1605,20 +1777,29 @@ function InspectionView({ serviceId, clientId, role, onClose, t }: { serviceId: 
         )}
       </header>
 
-      <div className="flex border-b border-slate-200 bg-slate-50">
+      <div className="flex border-b border-slate-200 bg-slate-50 overflow-x-auto">
         <button 
           onClick={() => setActiveTab('check-in')}
           className={cn(
-            "flex-1 py-4 text-sm font-bold transition-all border-b-2",
+            "flex-1 min-w-[100px] py-4 text-sm font-bold transition-all border-b-2",
             activeTab === 'check-in' ? "border-teal-900 text-teal-900 bg-white" : "border-transparent text-slate-400"
           )}
         >
           {t.checkIn}
         </button>
         <button 
+          onClick={() => setActiveTab('checklist')}
+          className={cn(
+            "flex-1 min-w-[100px] py-4 text-sm font-bold transition-all border-b-2",
+            activeTab === 'checklist' ? "border-teal-900 text-teal-900 bg-white" : "border-transparent text-slate-400"
+          )}
+        >
+          {t.checklist}
+        </button>
+        <button 
           onClick={() => setActiveTab('check-out')}
           className={cn(
-            "flex-1 py-4 text-sm font-bold transition-all border-b-2",
+            "flex-1 min-w-[100px] py-4 text-sm font-bold transition-all border-b-2",
             activeTab === 'check-out' ? "border-teal-900 text-teal-900 bg-white" : "border-transparent text-slate-400"
           )}
         >
@@ -1627,7 +1808,7 @@ function InspectionView({ serviceId, clientId, role, onClose, t }: { serviceId: 
         <button 
           onClick={() => setActiveTab('audit')}
           className={cn(
-            "flex-1 py-4 text-sm font-bold transition-all border-b-2",
+            "flex-1 min-w-[100px] py-4 text-sm font-bold transition-all border-b-2",
             activeTab === 'audit' ? "border-teal-900 text-teal-900 bg-white" : "border-transparent text-slate-400"
           )}
         >
@@ -1637,6 +1818,89 @@ function InspectionView({ serviceId, clientId, role, onClose, t }: { serviceId: 
 
       <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-slate-50">
         <div className="max-w-4xl mx-auto space-y-8">
+          {activeTab === 'checklist' && (
+            <div className="space-y-6">
+              <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                <h3 className="text-lg font-bold text-teal-900 mb-4">{t.mandatoryPhotos}</h3>
+                
+                {role === 'admin' && report?.status === 'in_progress' && (
+                  <div className="flex gap-2 mb-6">
+                    <input 
+                      type="text" 
+                      value={newExtraPhoto} 
+                      onChange={e => setNewExtraPhoto(e.target.value)}
+                      placeholder="Add extra photo requirement for today..."
+                      className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+                    />
+                    <button 
+                      onClick={async () => {
+                        if (newExtraPhoto.trim() && report) {
+                          const updatedReport = { ...report };
+                          updatedReport.extra_mandatory_photos = [
+                            ...(updatedReport.extra_mandatory_photos || []),
+                            newExtraPhoto.trim()
+                          ];
+                          await firebaseService.saveInspectionReport(updatedReport);
+                          setNewExtraPhoto('');
+                        }
+                      }}
+                      className="px-4 bg-teal-900 text-white rounded-xl font-bold"
+                    >
+                      <Plus size={20} />
+                    </button>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  {[...(client?.mandatory_photos || []), ...(report?.extra_mandatory_photos || [])].map((item, idx) => {
+                    const isDone = report?.check_out_photos.some(cat => 
+                      cat.photos.some(p => p.label === item)
+                    );
+                    return (
+                      <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "w-6 h-6 rounded-full border-2 flex items-center justify-center",
+                            isDone ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300"
+                          )}>
+                            {isDone && <Check size={14} />}
+                          </div>
+                          <span className={cn("font-bold", isDone ? "text-emerald-600" : "text-teal-900")}>{item}</span>
+                        </div>
+                        {role === 'staff' && report?.status === 'in_progress' && !isDone && (
+                          <PhotoUpload 
+                            onUpload={async (url) => {
+                              // Find a category to put it in, or just add to special areas
+                              const catIdx = report.check_out_photos.findIndex(c => c.category === t.specialAreas);
+                              const newPhoto: InspectionPhoto = {
+                                url,
+                                timestamp: new Date().toISOString(),
+                                label: item
+                              };
+                              const updatedReport = { ...report };
+                              updatedReport.check_out_photos[catIdx].photos = [
+                                ...updatedReport.check_out_photos[catIdx].photos,
+                                newPhoto
+                              ];
+                              await firebaseService.saveInspectionReport(updatedReport);
+                            }} 
+                            label={t.takePhoto} 
+                            t={t} 
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                  {(!client?.mandatory_photos || client.mandatory_photos.length === 0) && (
+                    <div className="text-center py-12 text-slate-400">
+                      <p>No mandatory photos defined for this property.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'check-in' && (
             <div className="space-y-6">
               <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">

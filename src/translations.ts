@@ -87,7 +87,10 @@ export const translations = {
     problemsFound: 'Problems Found (Check-in)',
     completionPhotos: 'Completion Photos (Check-out)',
     auditPhotos: 'Audit Photos',
-    mandatoryPhotosList: 'Mandatory Photos List'
+    mandatoryPhotosList: 'Mandatory Photos List',
+    checklist: 'Checklist',
+    takePhoto: 'Take Photo',
+    edit: 'Edit'
   },
   pt: {
     dashboard: 'Painel',
@@ -175,6 +178,9 @@ export const translations = {
     problemsFound: 'Problemas Encontrados (Entrada)',
     completionPhotos: 'Fotos de Finalização (Saída)',
     auditPhotos: 'Fotos de Auditoria',
-    mandatoryPhotosList: 'Lista de Fotos Obrigatórias'
+    mandatoryPhotosList: 'Lista de Fotos Obrigatórias',
+    checklist: 'Checklist',
+    takePhoto: 'Tirar Foto',
+    edit: 'Editar'
   }
 };

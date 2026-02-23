@@ -62,6 +62,7 @@ export interface InspectionPhoto {
   comment?: string;
   admin_reply?: string;
   timestamp: string;
+  label?: string;
 }
 
 export interface InspectionReport {
@@ -74,6 +75,7 @@ export interface InspectionReport {
     photos: InspectionPhoto[];
   }[];
   audit_photos: InspectionPhoto[];
+  extra_mandatory_photos?: string[];
   status: 'in_progress' | 'completed';
   created_at: string;
 }
