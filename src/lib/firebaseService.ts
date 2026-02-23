@@ -35,6 +35,7 @@ export const firebaseService = {
   },
   // Settings
   async getSettings(): Promise<Settings> {
+    if (!db) throw new Error("Firestore not initialized");
     const docRef = doc(db, SETTINGS_COL, "global");
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
@@ -61,6 +62,7 @@ export const firebaseService = {
 
   // Clients
   async getClients(): Promise<Client[]> {
+    if (!db) throw new Error("Firestore not initialized");
     const q = query(collection(db, CLIENTS_COL), orderBy("name"));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as any));
@@ -80,6 +82,7 @@ export const firebaseService = {
 
   // Services
   async getServices(): Promise<Service[]> {
+    if (!db) throw new Error("Firestore not initialized");
     const q = query(collection(db, SERVICES_COL), orderBy("date", "desc"));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as any));
@@ -100,6 +103,7 @@ export const firebaseService = {
 
   // Quotations
   async getQuotations(): Promise<Quotation[]> {
+    if (!db) throw new Error("Firestore not initialized");
     const q = query(collection(db, QUOTATIONS_COL), orderBy("created_at", "desc"));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as any));
@@ -132,6 +136,7 @@ export const firebaseService = {
 
   // Real-time listeners
   subscribeNotifications(role: string, callback: (notifications: Notification[]) => void) {
+    if (!db) return () => {};
     const q = query(
       collection(db, NOTIFICATIONS_COL), 
       where("user_role", "==", role),

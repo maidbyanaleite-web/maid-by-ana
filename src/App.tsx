@@ -75,30 +75,42 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeInspection, setActiveInspection] = useState<{ serviceId: string, clientId: string | number } | null>(null);
 
-  const isFirebaseEnabled = !!import.meta.env.VITE_FIREBASE_API_KEY;
+  const isFirebaseEnabled = !!import.meta.env.VITE_FIREBASE_API_KEY && 
+    import.meta.env.VITE_FIREBASE_API_KEY !== "YOUR_FIREBASE_API_KEY" &&
+    import.meta.env.VITE_FIREBASE_API_KEY.startsWith("AIza");
 
   useEffect(() => {
     fetchData();
     let unsubscribe: (() => void) | undefined;
 
     if (isFirebaseEnabled) {
-      unsubscribe = firebaseService.subscribeNotifications(role, (notifs) => {
-        setNotifications(notifs);
-      });
-    } else {
-      const interval = setInterval(fetchNotifications, 30000);
-      return () => clearInterval(interval);
+      try {
+        unsubscribe = firebaseService.subscribeNotifications(role, (notifs) => {
+          setNotifications(notifs);
+        });
+      } catch (e) {
+        console.error("Failed to subscribe to Firebase notifications:", e);
+      }
     }
+    
+    const interval = setInterval(() => {
+      if (!isFirebaseEnabled) {
+        fetchNotifications();
+      }
+    }, 30000);
 
     return () => {
       if (unsubscribe) unsubscribe();
+      clearInterval(interval);
     };
   }, [role, isFirebaseEnabled]);
 
   const fetchData = async () => {
     setIsLoading(true);
-    try {
-      if (isFirebaseEnabled) {
+    let success = false;
+
+    if (isFirebaseEnabled) {
+      try {
         const [c, s, q, st] = await Promise.all([
           firebaseService.getClients(),
           firebaseService.getServices(),
@@ -109,24 +121,36 @@ export default function App() {
         setServices(s);
         setQuotations(q);
         setSettings(st);
-      } else {
+        success = true;
+      } catch (error) {
+        console.error('Firebase fetch failed, falling back to local API:', error);
+      }
+    }
+
+    if (!success) {
+      try {
         const [clientsRes, servicesRes, quotationsRes, settingsRes] = await Promise.all([
           fetch('/api/clients'),
           fetch('/api/services'),
           fetch('/api/quotations'),
           fetch('/api/settings')
         ]);
+        
+        if (!clientsRes.ok || !servicesRes.ok || !quotationsRes.ok || !settingsRes.ok) {
+          throw new Error('Local API fetch failed');
+        }
+
         setClients(await clientsRes.json());
         setServices(await servicesRes.json());
         setQuotations(await quotationsRes.json());
         setSettings(await settingsRes.json());
         await fetchNotifications();
+      } catch (error) {
+        console.error('Error fetching data from local API:', error);
       }
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setIsLoading(false);
     }
+    
+    setIsLoading(false);
   };
 
   const fetchNotifications = async () => {
