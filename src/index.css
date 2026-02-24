@@ -1,10 +1,9 @@
 @import "tailwindcss";
 
 @theme {
-  --color-teal-900: #004d4d;
-  --color-gold-500: #d4af37;
-  --color-gold-600: #b8860b;
-  
+  --color-petrol: #004d4d;
+  --color-gold: #d4af37;
+  --color-gold-light: #f4e1a1;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -15,17 +14,17 @@
 }
 
 .btn-primary {
-  @apply bg-teal-900 text-white px-4 py-2 rounded-lg hover:bg-teal-800 transition-colors flex items-center gap-2;
+  @apply bg-petrol text-white px-4 py-2 rounded-lg hover:opacity-90 transition-all font-medium;
 }
 
 .btn-secondary {
-  @apply bg-gold-500 text-white px-4 py-2 rounded-lg hover:bg-gold-600 transition-colors flex items-center gap-2;
+  @apply border-2 border-gold text-petrol px-4 py-2 rounded-lg hover:bg-gold hover:text-white transition-all font-medium;
 }
 
 .card {
-  @apply bg-white p-6 rounded-xl shadow-sm border border-slate-200;
+  @apply bg-white p-6 rounded-2xl shadow-sm border border-slate-100;
 }
 
-.input-field {
-  @apply w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-900 focus:border-transparent outline-none;
+.input {
+  @apply w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-petrol/20 focus:border-petrol transition-all;
 }

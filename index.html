@@ -3,7 +3,33 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Google AI Studio App</title>
+    <title>Maid By Ana</title>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+    
+    <script>
+      // Firebase configuration - Replace with your actual config
+      const firebaseConfig = {
+        apiKey: "AIzaSyBgO3BpNX0Kuy5SAZlehoDVLMlEw08v3Yg",
+        authDomain: "maid-by-ana-production.firebaseapp.com",
+        projectId: "maid-by-ana-production",
+        storageBucket: "maid-by-ana-production.firebasestorage.app",
+        messagingSenderId: "507056939130",
+        appId: "1:507056939130:web:3d31919b4adc9f7e089bc3",
+        measurementId: "G-2FN1P6225X"
+      };
+      
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      
+      // Global access for the app
+      window.db = firebase.firestore();
+      window.auth = firebase.auth();
+      window.storage = firebase.storage();
+    </script>
   </head>
   <body>
     <div id="root"></div>
