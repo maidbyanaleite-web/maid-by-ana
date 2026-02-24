@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../services/firebase';
-import { Client, ClientType, Frequency, ServiceType, PaymentMethod } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
+import { Client, ClientType, Frequency, ServiceType, PaymentMethod, UserProfile } from '../types';
 import { ArrowLeft, Save } from 'lucide-react';
 
 export default function NewClient() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
+  const [staffList, setStaffList] = useState<UserProfile[]>([]);
   const [formData, setFormData] = useState<Partial<Client>>({
     type: 'regular',
     frequency: 'semanal',
@@ -17,6 +20,16 @@ export default function NewClient() {
     cleaningDates: [],
     paymentDates: []
   });
+
+  useEffect(() => {
+    const unsubscribe = db.collection('users')
+      .where('role', '==', 'staff')
+      .onSnapshot((snapshot) => {
+        const users = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+        setStaffList(users);
+      });
+    return () => unsubscribe();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,78 +51,78 @@ export default function NewClient() {
     <div className="max-w-4xl mx-auto space-y-8">
       <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-500 hover:text-petrol transition-colors">
         <ArrowLeft size={20} />
-        Cancel
+        {t('cancel')}
       </button>
 
       <form onSubmit={handleSubmit} className="card space-y-8">
         <header>
-          <h1 className="text-2xl font-bold text-petrol">Register New Client</h1>
-          <p className="text-slate-500 text-sm">Fill in the details to add a new client to the system.</p>
+          <h1 className="text-2xl font-bold text-petrol">{t('registerClient')}</h1>
+          <p className="text-slate-500 text-sm">{t('managementSystem')}</p>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
-            <h3 className="font-bold text-slate-700 border-b pb-2">Basic Information</h3>
+            <h3 className="font-bold text-slate-700 border-b pb-2">{t('fullName')}</h3>
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-1">Client Name</label>
+              <label className="block text-sm font-medium text-slate-600 mb-1">{t('clientName')}</label>
               <input type="text" required className="input" onChange={e => setFormData({...formData, name: e.target.value})} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-1">Client Type</label>
+              <label className="block text-sm font-medium text-slate-600 mb-1">{t('clientType')}</label>
               <select className="input" value={formData.type} onChange={e => setFormData({...formData, type: e.target.value as ClientType})}>
-                <option value="regular">Regular</option>
-                <option value="airbnb">Airbnb</option>
+                <option value="regular">{t('regular')}</option>
+                <option value="airbnb">{t('airbnb')}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-1">Address</label>
+              <label className="block text-sm font-medium text-slate-600 mb-1">{t('address')}</label>
               <input type="text" required className="input" onChange={e => setFormData({...formData, address: e.target.value})} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">Phone</label>
+                <label className="block text-sm font-medium text-slate-600 mb-1">{t('phone')}</label>
                 <input type="tel" required className="input" onChange={e => setFormData({...formData, phone: e.target.value})} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">Email</label>
+                <label className="block text-sm font-medium text-slate-600 mb-1">{t('email')}</label>
                 <input type="email" required className="input" onChange={e => setFormData({...formData, email: e.target.value})} />
               </div>
             </div>
           </div>
 
           <div className="space-y-4">
-            <h3 className="font-bold text-slate-700 border-b pb-2">Service & Financials</h3>
+            <h3 className="font-bold text-slate-700 border-b pb-2">{t('budget')}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">Frequency</label>
+                <label className="block text-sm font-medium text-slate-600 mb-1">{t('frequency')}</label>
                 <select className="input" value={formData.frequency} onChange={e => setFormData({...formData, frequency: e.target.value as Frequency})}>
-                  <option value="semanal">Weekly</option>
-                  <option value="quinzenal">Bi-weekly</option>
-                  <option value="mensal">Monthly</option>
+                  <option value="semanal">{t('weekly')}</option>
+                  <option value="quinzenal">{t('biweekly')}</option>
+                  <option value="mensal">{t('monthly')}</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">Service Type</label>
+                <label className="block text-sm font-medium text-slate-600 mb-1">{t('serviceType')}</label>
                 <select className="input" value={formData.serviceType} onChange={e => setFormData({...formData, serviceType: e.target.value as ServiceType})}>
-                  <option value="regular">Regular</option>
-                  <option value="deep">Deep Cleaning</option>
-                  <option value="move_in">Move In</option>
-                  <option value="move_out">Move Out</option>
+                  <option value="regular">{t('regular')}</option>
+                  <option value="deep">{t('deepCleaning')}</option>
+                  <option value="move_in">{t('moveIn')}</option>
+                  <option value="move_out">{t('moveOut')}</option>
                 </select>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">Service Value ($)</label>
+                <label className="block text-sm font-medium text-slate-600 mb-1">{t('serviceValue')} ($)</label>
                 <input type="number" required className="input" onChange={e => setFormData({...formData, serviceValue: Number(e.target.value)})} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">Team Pay ($)</label>
+                <label className="block text-sm font-medium text-slate-600 mb-1">{t('teamPay')} ($)</label>
                 <input type="number" required className="input" onChange={e => setFormData({...formData, teamPaymentValue: Number(e.target.value)})} />
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-600 mb-1">Payment Method</label>
+              <label className="block text-sm font-medium text-slate-600 mb-1">{t('paymentMethod')}</label>
               <select className="input" value={formData.paymentMethod} onChange={e => setFormData({...formData, paymentMethod: e.target.value as PaymentMethod})}>
                 <option value="cash">Cash</option>
                 <option value="zelle">Zelle</option>
@@ -117,15 +130,47 @@ export default function NewClient() {
                 <option value="check">Check</option>
               </select>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-600 mb-1">{t('nextPayment')}</label>
+              <input type="date" className="input" onChange={e => setFormData({...formData, nextPaymentDue: e.target.value})} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-600 mb-1">{t('numberOfStaff')}</label>
+                <input type="number" min="1" className="input" defaultValue="1" onChange={e => setFormData({...formData, numberOfStaff: Number(e.target.value)})} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-600 mb-1">{t('assignStaff')}</label>
+                <select 
+                  className="input" 
+                  value={formData.assignedStaffId || ''} 
+                  onChange={e => setFormData({...formData, assignedStaffId: e.target.value})}
+                >
+                  <option value="">{t('selectStaff')}</option>
+                  {staffList.map(staff => (
+                    <option key={staff.uid} value={staff.uid}>{staff.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 pt-2">
+              <input 
+                type="checkbox" 
+                id="budgetRequested" 
+                className="w-5 h-5 accent-petrol"
+                onChange={e => setFormData({...formData, budgetRequested: e.target.checked, budgetSent: false})} 
+              />
+              <label htmlFor="budgetRequested" className="text-sm font-medium text-slate-600">{t('budgetRequested')}</label>
+            </div>
           </div>
         </div>
 
         {formData.type === 'airbnb' && (
           <div className="space-y-4 pt-4 border-t">
-            <h3 className="font-bold text-gold border-b pb-2">Airbnb Specific Details</h3>
+            <h3 className="font-bold text-gold border-b pb-2">{t('airbnb')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">Owner Name</label>
+                <label className="block text-sm font-medium text-slate-600 mb-1">{t('fullName')}</label>
                 <input type="text" className="input" onChange={e => setFormData({...formData, ownerName: e.target.value})} />
               </div>
               <div>
@@ -143,7 +188,7 @@ export default function NewClient() {
             className="btn-primary flex items-center gap-2 px-8 py-3"
           >
             <Save size={20} />
-            {loading ? 'Saving...' : 'Save Client'}
+            {loading ? t('processing') : t('saveClient')}
           </button>
         </div>
       </form>

@@ -1,10 +1,11 @@
-export type UserRole = 'admin' | 'staff';
+export type UserRole = 'admin' | 'staff' | 'client';
 
 export interface UserProfile {
   uid: string;
   email: string;
   role: UserRole;
   name: string;
+  clientId?: string;
 }
 
 export type ClientType = 'regular' | 'airbnb';
@@ -38,6 +39,33 @@ export interface Client {
   propertyName?: string;
   propertyLink?: string;
   reviews?: string[];
+
+  // Notification related
+  budgetRequested?: boolean;
+  budgetSent?: boolean;
+  nextPaymentDue?: string;
+  assignedStaffId?: string;
+  numberOfStaff?: number;
+}
+
+export interface Cleaning {
+  id?: string;
+  clientId: string;
+  clientName: string;
+  clientAddress: string;
+  clientType: ClientType;
+  date: string;
+  assignedStaffId: string;
+  assignedStaffName: string;
+  serviceValue: number;
+  teamPaymentValue: number;
+  status: 'scheduled' | 'completed';
+  notes?: string;
+  photosBefore?: string[];
+  photosAfter?: string[];
+  extraPhotos?: string[];
+  staffNotes?: string;
+  clientFeedback?: string;
 }
 
 export interface BudgetResult {

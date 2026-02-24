@@ -9,6 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
     
     <script>
       // Firebase configuration - Replace with your actual config
@@ -29,6 +30,12 @@
       window.db = firebase.firestore();
       window.auth = firebase.auth();
       window.storage = firebase.storage();
+      
+      try {
+        window.messaging = firebase.messaging();
+      } catch (e) {
+        console.log("Messaging not supported in this browser");
+      }
     </script>
   </head>
   <body>

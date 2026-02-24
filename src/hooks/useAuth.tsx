@@ -7,6 +7,7 @@ interface AuthContextType {
   loading: boolean;
   isAdmin: boolean;
   isStaff: boolean;
+  isClient: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -14,6 +15,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   isAdmin: false,
   isStaff: false,
+  isClient: false,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -49,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     isAdmin: user?.role === 'admin',
     isStaff: user?.role === 'staff',
+    isClient: user?.role === 'client',
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

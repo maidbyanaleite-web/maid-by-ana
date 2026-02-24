@@ -2,18 +2,14 @@ import { ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { auth } from '../services/firebase';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Calculator, 
-  LogOut,
-  Menu,
-  X
-} from 'lucide-react';
+import { LayoutDashboard, Users, Calculator, LogOut, Menu, X, Languages } from 'lucide-react';
 import { useState } from 'react';
+import NotificationCenter from './NotificationCenter';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function Layout({ children }: { children: ReactNode }) {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
+  const { t, language, setLanguage } = useLanguage();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -23,9 +19,14 @@ export default function Layout({ children }: { children: ReactNode }) {
   };
 
   const navItems = [
-    { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/budget', icon: Calculator, label: 'Budget' },
+    { to: '/', icon: LayoutDashboard, label: t('dashboard') },
+    { to: '/clients', icon: Users, label: t('clients') },
+    { to: '/budget', icon: Calculator, label: t('budget') },
   ];
+
+  if (isAdmin) {
+    navItems.push({ to: '/staff', icon: Users, label: t('manageStaff') });
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
@@ -99,9 +100,35 @@ export default function Layout({ children }: { children: ReactNode }) {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 p-4 md:p-8 lg:p-12 overflow-y-auto">
-        <div className="max-w-7xl mx-auto">
-          {children}
+      <main className="flex-1 flex flex-col h-screen overflow-hidden">
+        <header className="h-16 border-b border-slate-100 bg-white flex items-center justify-between px-8 shrink-0">
+          <div className="md:hidden" /> {/* Spacer for mobile */}
+          <div className="flex items-center gap-4 ml-auto">
+            <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-lg border border-slate-100">
+              <button 
+                onClick={() => setLanguage('en')}
+                className={`px-2 py-1 text-[10px] font-bold rounded ${language === 'en' ? 'bg-petrol text-white' : 'text-slate-400'}`}
+              >
+                EN
+              </button>
+              <button 
+                onClick={() => setLanguage('pt')}
+                className={`px-2 py-1 text-[10px] font-bold rounded ${language === 'pt' ? 'bg-petrol text-white' : 'text-slate-400'}`}
+              >
+                PT
+              </button>
+            </div>
+            <NotificationCenter />
+            <div className="w-8 h-8 rounded-full bg-petrol flex items-center justify-center text-white text-xs font-bold">
+              {user?.name?.charAt(0)}
+            </div>
+          </div>
+        </header>
+        
+        <div className="flex-1 p-4 md:p-8 lg:p-12 overflow-y-auto">
+          <div className="max-w-7xl mx-auto">
+            {children}
+          </div>
         </div>
       </main>
     </div>
