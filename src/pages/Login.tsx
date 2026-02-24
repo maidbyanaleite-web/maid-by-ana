@@ -1,16 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { auth, db } from '../services/firebase';
 import { LogIn } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
   const [isRegistering, setIsRegistering] = useState(false);
   const [name, setName] = useState('');
+  
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // Redireciona se já estiver logado
+  useEffect(() => {
+    if (user) {
+      navigate('/');
+    }
+  }, [user, navigate]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,15 +34,16 @@ export default function Login() {
           await db.collection('users').doc(res.user.uid).set({
             name: name,
             email: email,
-            role: 'admin' // O primeiro usuário criado será admin por padrão neste setup inicial
+            role: 'admin'
           });
         }
       } else {
         await auth.signInWithEmailAndPassword(email, password);
       }
+      // O useEffect acima cuidará do redirecionamento assim que o estado do user mudar
     } catch (err: any) {
+      console.error("Auth error:", err);
       setError(err.message || 'Authentication failed');
-    } finally {
       setLoading(false);
     }
   };
