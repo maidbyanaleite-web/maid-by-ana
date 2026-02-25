@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from '../services/firebase';
-import { LogIn } from 'lucide-react';
+import { LogIn, Calculator } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -130,13 +130,24 @@ export default function Login() {
             )}
           </button>
 
-          <button 
-            type="button"
-            onClick={() => setIsRegistering(!isRegistering)}
-            className="w-full text-sm text-petrol hover:underline"
-          >
-            {isRegistering ? t('alreadyHaveAccount') : t('needAccount')}
-          </button>
+          {isRegistering ? (
+            <button 
+              type="button"
+              onClick={() => setIsRegistering(false)}
+              className="w-full text-sm text-petrol hover:underline"
+            >
+              {t('alreadyHaveAccount')}
+            </button>
+          ) : (
+            <button 
+              type="button"
+              onClick={() => navigate('/public-budget')}
+              className="w-full btn-secondary flex items-center justify-center gap-2 py-3"
+            >
+              <Calculator size={20} className="text-gold" />
+              {t('getEstimate')}
+            </button>
+          )}
         </form>
       </motion.div>
     </div>

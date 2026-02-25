@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../services/firebase';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Client, Cleaning, UserProfile } from '../types';
+import { Client, Cleaning, UserProfile, BudgetRequest } from '../types';
 import { 
   Users, 
   Calendar, 
@@ -19,7 +19,10 @@ import {
   X,
   Maximize2,
   Camera,
-  Info
+  Info,
+  Calculator,
+  Check,
+  Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -32,6 +35,7 @@ export default function Dashboard() {
   const [clients, setClients] = useState<Client[]>([]);
   const [cleanings, setCleanings] = useState<Cleaning[]>([]);
   const [staffList, setStaffList] = useState<UserProfile[]>([]);
+  const [budgetRequests, setBudgetRequests] = useState<BudgetRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCleaning, setSelectedCleaning] = useState<Cleaning | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
@@ -56,10 +60,19 @@ export default function Dashboard() {
         .onSnapshot((snapshot) => {
           setStaffList(snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile)));
         });
+
+      const unsubBudgets = db.collection('budget_requests')
+        .where('status', '==', 'pending')
+        .onSnapshot((snapshot) => {
+          const budgets = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BudgetRequest));
+          setBudgetRequests(budgets.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        });
+
       return () => {
         unsubClients();
         unsubCleanings();
         unsubStaff();
+        unsubBudgets();
       };
     }
 
@@ -94,6 +107,10 @@ export default function Dashboard() {
       assignedStaffIds: nextIds,
       assignedStaffNames: nextNames
     });
+  };
+
+  const handleUpdateBudgetStatus = async (budgetId: string, status: 'approved' | 'rejected') => {
+    await db.collection('budget_requests').doc(budgetId).update({ status });
   };
 
   const totalRevenue = clients.reduce((acc, c) => acc + (c.serviceValue || 0), 0);
@@ -140,6 +157,18 @@ export default function Dashboard() {
         </motion.div>
 
         {isAdmin && (
+          <motion.div whileHover={{ y: -5 }} className="card flex items-center gap-4">
+            <div className="p-3 bg-purple-100 rounded-xl text-purple-600">
+              <Calculator size={24} />
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">{t('pendingBudgets')}</p>
+              <p className="text-2xl font-bold">{budgetRequests.length}</p>
+            </div>
+          </motion.div>
+        )}
+
+        {isAdmin && (
           <>
             <motion.div whileHover={{ y: -5 }} className="card flex items-center gap-4">
               <div className="p-3 bg-emerald-100 rounded-xl text-emerald-600">
@@ -163,6 +192,62 @@ export default function Dashboard() {
           </>
         )}
       </div>
+
+      {/* Budget Requests Section */}
+      {isAdmin && budgetRequests.length > 0 && (
+        <section className="space-y-4">
+          <h2 className="text-xl font-bold text-petrol flex items-center gap-2">
+            <Calculator size={20} />
+            {t('pendingBudgets')}
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {budgetRequests.map(budget => (
+              <div key={budget.id} className="card border-purple-100 hover:border-purple-300 transition-colors">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="font-bold text-lg text-petrol">{budget.clientName}</h3>
+                    <p className="text-xs text-slate-400">{new Date(budget.createdAt).toLocaleString()}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-petrol">${budget.totalValue}</p>
+                    <p className="text-[10px] text-slate-400 uppercase font-bold">{t(budget.serviceType + 'Cleaning' as any)}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-sm text-slate-600 mb-4">
+                  <div className="flex items-center gap-2">
+                    <MapPin size={14} className="text-slate-400" />
+                    <span>{budget.address}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock size={14} className="text-slate-400" />
+                    <span className="text-xs">
+                      {Object.entries(budget.extras).filter(([_, v]) => (v as number) > 0).map(([k, v]) => `${t(k + 'Addon' as any)} (x${v})`).join(', ') || 'No extras'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-4 border-t border-slate-100">
+                  <button 
+                    onClick={() => handleUpdateBudgetStatus(budget.id!, 'approved')}
+                    className="flex-1 bg-emerald-500 text-white py-2 rounded-xl text-sm font-bold hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Check size={16} />
+                    {t('completed')}
+                  </button>
+                  <button 
+                    onClick={() => handleUpdateBudgetStatus(budget.id!, 'rejected')}
+                    className="flex-1 bg-slate-100 text-slate-600 py-2 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Trash2 size={16} />
+                    {t('delete')}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Today's Schedule */}
       <section className="space-y-4">

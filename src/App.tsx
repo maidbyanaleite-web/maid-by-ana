@@ -12,6 +12,7 @@ import Clients from './pages/Clients';
 import NewClient from './pages/NewClient';
 import ClientDetails from './pages/ClientDetails';
 import Budget from './pages/Budget';
+import PublicBudget from './pages/PublicBudget';
 
 function PrivateRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -40,6 +41,7 @@ export default function App() {
             <Route path="/clients/new" element={<PrivateRoute><NewClient /></PrivateRoute>} />
             <Route path="/clients/:id" element={<PrivateRoute><ClientDetails /></PrivateRoute>} />
             <Route path="/budget" element={<PrivateRoute><Budget /></PrivateRoute>} />
+            <Route path="/public-budget" element={<PublicBudget />} />
           </Routes>
         </Router>
       </LanguageProvider>

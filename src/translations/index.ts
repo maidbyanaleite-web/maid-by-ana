@@ -118,6 +118,12 @@ export const translations = {
     quantity: 'Quantity',
     extras: 'Extras',
     clientSince: 'Client Since',
+    getEstimate: 'Get an Estimate',
+    confirmBudget: 'Confirm and Request Service',
+    budgetSuccess: 'Request sent successfully! We will contact you soon.',
+    contactInfo: 'Contact Information',
+    backToLogin: 'Back to Login',
+    totalEstimate: 'Total Estimate',
   },
   pt: {
     appName: 'Maid By Ana',
@@ -236,5 +242,11 @@ export const translations = {
     quantity: 'Quantidade',
     extras: 'Extras',
     clientSince: 'Cliente Desde',
+    getEstimate: 'Obter Estimativa',
+    confirmBudget: 'Confirmar e Solicitar Serviço',
+    budgetSuccess: 'Solicitação enviada com sucesso! Entraremos em contato em breve.',
+    contactInfo: 'Informações de Contato',
+    backToLogin: 'Voltar para o Login',
+    totalEstimate: 'Estimativa Total',
   }
 };

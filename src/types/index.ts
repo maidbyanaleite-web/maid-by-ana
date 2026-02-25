@@ -78,6 +78,19 @@ export interface BudgetResult {
   totalValue: number;
 }
 
+export interface BudgetRequest {
+  id?: string;
+  clientName: string;
+  email: string;
+  phone: string;
+  address: string;
+  serviceType: 'light' | 'medium' | 'deep';
+  extras: Record<string, number>;
+  totalValue: number;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+}
+
 export interface PricingSettings {
   lightCleaning: number;
   mediumCleaning: number;
