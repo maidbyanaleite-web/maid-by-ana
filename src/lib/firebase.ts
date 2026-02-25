@@ -1,26 +1,20 @@
-import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+// This file exports the Firebase services initialized in index.html
+// We use the 'compat' version as requested to match the previous project pattern
 
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAM4K96HLPce8iRkcVZVWc3uS_T5c0gTX8",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "my-ana-projet.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "my-ana-projet",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "my-ana-projet.firebasestorage.app",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "207961899021",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:207961899021:web:e63f5aa99bb0fd69f61544",
-  measurementId: "G-8TTV758HPJ"
-};
+declare global {
+  interface Window {
+    firebase: any;
+  }
+}
 
-const hasConfig = !!firebaseConfig.apiKey && firebaseConfig.apiKey.startsWith("AIza");
+const firebase = window.firebase;
 
-// Initialize Firebase only if config is present
-const app = hasConfig ? initializeApp(firebaseConfig) : null;
+if (!firebase) {
+  console.error("Firebase not found on window object. Make sure it's configured in index.html");
+}
 
-// Initialize services safely
-export const auth = app ? getAuth(app) : null as any;
-export const db = app ? getFirestore(app) : null as any;
-export const storage = app ? getStorage(app) : null as any;
+export const auth = firebase.auth();
+export const db = firebase.firestore();
+export const storage = firebase.storage();
 
-export default app;
+export default firebase;

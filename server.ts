@@ -1,232 +1,303 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
-import { Server } from "socket.io";
-import http from "http";
 import Database from "better-sqlite3";
 import path from "path";
-import fs from "fs";
-import multer from "multer";
-import { format } from "date-fns";
-import admin from "firebase-admin";
 import { fileURLToPath } from "url";
+import { WebSocketServer, WebSocket } from "ws";
+import { createServer } from "http";
 
-/* ================= DIRNAME FIX (ESM SAFE) ================= */
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const db = new Database("maid_by_ana.db");
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-/* ================= FIREBASE ADMIN INIT ================= */
-
-if (
-  process.env.FIREBASE_PROJECT_ID &&
-  process.env.FIREBASE_CLIENT_EMAIL &&
-  process.env.FIREBASE_PRIVATE_KEY
-) {
-  try {
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
-      }),
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-    });
-
-    console.log("🔥 Firebase Admin initialized");
-  } catch (error) {
-    console.error("❌ Firebase Admin init error:", error);
-  }
-}
-
-/* ================= SAFE SQLITE INIT (ABSOLUTE + FINAL FIX) ================= */
-
-const dataDir = path.join(__dirname, "data");
-
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-}
-
-const dbPath = path.join(dataDir, "maid_by_ana.db");
-
-console.log("📁 DATABASE PATH:", dbPath);
-
-let db: Database.Database;
-
-try {
-  db = new Database(dbPath);
-} catch (error: any) {
-  if (error.code === "SQLITE_NOTADB") {
-    console.log("⚠️ Corrupted DB detected. Recreating...");
-    if (fs.existsSync(dbPath)) {
-      fs.unlinkSync(dbPath);
-    }
-    db = new Database(dbPath);
-  } else {
-    throw error;
-  }
-}
-
-/* ================= DATABASE SCHEMA ================= */
-
+// Initialize Database
 db.exec(`
-PRAGMA foreign_keys = ON;
+  CREATE TABLE IF NOT EXISTS clients (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT CHECK(type IN ('Regular', 'Airbnb')),
+    name TEXT NOT NULL,
+    owner_name TEXT,
+    property_name TEXT,
+    since TEXT,
+    address TEXT,
+    email TEXT,
+    phone TEXT,
+    frequency TEXT,
+    property_link TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 
-CREATE TABLE IF NOT EXISTS users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  username TEXT UNIQUE,
-  password TEXT,
-  role TEXT CHECK(role IN ('admin','staff'))
-);
+  CREATE TABLE IF NOT EXISTS staff (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT UNIQUE,
+    phone TEXT,
+    status TEXT DEFAULT 'Active',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 
-CREATE TABLE IF NOT EXISTS clients (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  type TEXT,
-  name TEXT NOT NULL,
-  since TEXT,
-  address TEXT,
-  email TEXT,
-  phone TEXT,
-  frequency TEXT,
-  property_name TEXT,
-  property_link TEXT,
-  reviews TEXT
-);
+  CREATE TABLE IF NOT EXISTS jobs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER,
+    staff_id INTEGER, -- Assigned staff member
+    service_type TEXT,
+    service_value REAL,
+    staff_value REAL,
+    cleaning_date TEXT,
+    cleaning_time TEXT, -- Added time
+    payment_date TEXT,
+    payment_method TEXT,
+    status TEXT DEFAULT 'Scheduled', -- Scheduled, On the way, Started, Finished, Cancelled
+    notes TEXT,
+    photos_before TEXT,
+    photos_after TEXT,
+    FOREIGN KEY(client_id) REFERENCES clients(id),
+    FOREIGN KEY(staff_id) REFERENCES staff(id)
+  );
 
-CREATE TABLE IF NOT EXISTS services (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  client_id INTEGER,
-  service_type TEXT,
-  extras TEXT,
-  service_value REAL,
-  staff_pay REAL,
-  service_date TEXT,
-  payment_date TEXT,
-  payment_method TEXT,
-  status TEXT DEFAULT 'scheduled',
-  FOREIGN KEY(client_id) REFERENCES clients(id)
-);
+  CREATE TABLE IF NOT EXISTS quotations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT,
+    inputs TEXT,
+    total_value REAL,
+    status TEXT DEFAULT 'Pending', -- Pending, Sent
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 
-CREATE TABLE IF NOT EXISTS quotations (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  client_name TEXT,
-  type TEXT,
-  inputs TEXT,
-  total_value REAL,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS notifications (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_role TEXT,
-  title TEXT,
-  message TEXT,
-  type TEXT,
-  is_read INTEGER DEFAULT 0,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS settings (
-  key TEXT PRIMARY KEY,
-  value TEXT
-);
+  CREATE TABLE IF NOT EXISTS notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT, -- 'Staff_Job', 'Admin_Payment', 'Admin_Quotation'
+    target_id INTEGER, -- job_id or quotation_id
+    role TEXT, -- 'Admin', 'Staff'
+    message TEXT,
+    sent_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
-
-/* ================= SEED ADMIN ================= */
-
-const adminExists = db
-  .prepare("SELECT COUNT(*) as count FROM users WHERE role='admin'")
-  .get() as any;
-
-if (adminExists.count === 0) {
-  db.prepare(
-    "INSERT INTO users (username,password,role) VALUES (?,?,?)"
-  ).run("ana", "admin123", "admin");
-
-  db.prepare(
-    "INSERT INTO users (username,password,role) VALUES (?,?,?)"
-  ).run("staff", "staff123", "staff");
-}
-
-/* ================= SERVER START ================= */
 
 async function startServer() {
   const app = express();
-  const server = http.createServer(app);
-  const io = new Server(server);
+  const httpServer = createServer(app);
+  const wss = new WebSocketServer({ server: httpServer });
   const PORT = 3000;
 
   app.use(express.json());
 
-  /* ===== Upload Setup ===== */
-
-  const uploadDir = path.join(__dirname, "uploads");
-
-  if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-  }
-
-  const storage = multer.diskStorage({
-    destination: (_, __, cb) => cb(null, uploadDir),
-    filename: (_, file, cb) =>
-      cb(null, Date.now() + "-" + file.originalname),
+  // WebSocket Connection Handling
+  const clients_ws = new Set<WebSocket>();
+  wss.on("connection", (ws) => {
+    clients_ws.add(ws);
+    ws.on("close", () => clients_ws.delete(ws));
   });
 
-  const upload = multer({ storage });
-
-  app.use("/uploads", express.static(uploadDir));
-
-  /* ===== SOCKET ===== */
-
-  io.on("connection", (socket) => {
-    console.log("🔌 Client connected");
-
-    socket.on("join", (role) => {
-      socket.join(role);
+  const broadcast = (data: any) => {
+    const message = JSON.stringify(data);
+    clients_ws.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
     });
+  };
+
+  // Notification Engine
+  const checkNotifications = () => {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // 1. Staff: Upcoming jobs today
+    const upcomingJobs = db.prepare(`
+      SELECT jobs.*, clients.name as client_name, clients.address as client_address
+      FROM jobs 
+      JOIN clients ON jobs.client_id = clients.id
+      WHERE cleaning_date = ? AND jobs.status = 'Scheduled'
+    `).all(today);
+
+    upcomingJobs.forEach((job: any) => {
+      const alreadySent = db.prepare("SELECT id FROM notifications WHERE type = 'Staff_Job' AND target_id = ?").get(job.id);
+      if (!alreadySent) {
+        const message = `Reminder: Cleaning at ${job.client_address} for ${job.client_name} today!`;
+        db.prepare("INSERT INTO notifications (type, target_id, role, message) VALUES (?, ?, ?, ?)").run('Staff_Job', job.id, 'Staff', message);
+        broadcast({ type: 'NOTIFICATION', role: 'Staff', message, data: job });
+      }
+    });
+
+    // 2. Admin: Pending payments for completed jobs
+    const pendingPayments = db.prepare(`
+      SELECT jobs.*, clients.name as client_name
+      FROM jobs
+      JOIN clients ON jobs.client_id = clients.id
+      WHERE jobs.status = 'Finished' AND (payment_date IS NULL OR payment_date = '')
+    `).all();
+
+    pendingPayments.forEach((job: any) => {
+      const alreadySent = db.prepare("SELECT id FROM notifications WHERE type = 'Admin_Payment' AND target_id = ?").get(job.id);
+      if (!alreadySent) {
+        const message = `Payment Pending: ${job.client_name} has not paid for the service on ${job.cleaning_date}.`;
+        db.prepare("INSERT INTO notifications (type, target_id, role, message) VALUES (?, ?, ?, ?)").run('Admin_Payment', job.id, 'Admin', message);
+        broadcast({ type: 'NOTIFICATION', role: 'Admin', message, data: job });
+      }
+    });
+
+    // 3. Admin: Pending quotations
+    const pendingQuotes = db.prepare("SELECT * FROM quotations WHERE status = 'Pending'").all();
+    pendingQuotes.forEach((quote: any) => {
+      const alreadySent = db.prepare("SELECT id FROM notifications WHERE type = 'Admin_Quotation' AND target_id = ?").get(quote.id);
+      if (!alreadySent) {
+        const message = `Pending Quotation: A ${quote.type} quote for ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(quote.total_value)} is waiting to be sent.`;
+        db.prepare("INSERT INTO notifications (type, target_id, role, message) VALUES (?, ?, ?, ?)").run('Admin_Quotation', quote.id, 'Admin', message);
+        broadcast({ type: 'NOTIFICATION', role: 'Admin', message, data: quote });
+      }
+    });
+  };
+
+  // Run check every 30 seconds
+  setInterval(checkNotifications, 30000);
+
+  // API Routes
+  app.get("/api/notifications", (req, res) => {
+    const role = req.query.role as string;
+    const notifications = db.prepare("SELECT * FROM notifications WHERE role = ? ORDER BY sent_at DESC LIMIT 20").all(role);
+    res.json(notifications);
   });
 
-  /* ===== NOTIFICATIONS JOB ===== */
-
-  setInterval(() => {
-    const today = format(new Date(), "yyyy-MM-dd");
-
-    const todaysServices = db
-      .prepare(
-        `SELECT services.*, clients.name as client_name
-         FROM services
-         JOIN clients ON services.client_id = clients.id
-         WHERE service_date = ?`
-      )
-      .all(today) as any[];
-
-    todaysServices.forEach((service) => {
-      db.prepare(
-        "INSERT INTO notifications (user_role,title,message,type) VALUES (?,?,?,?)"
-      ).run(
-        "staff",
-        "Service Today",
-        `Service for ${service.client_name}`,
-        "service_reminder"
-      );
-    });
-  }, 60000);
-
-  /* ===== BASIC ROUTES ===== */
-
-  app.get("/api/clients", (_, res) => {
-    res.json(db.prepare("SELECT * FROM clients").all());
+  app.get("/api/clients", (req, res) => {
+    const clients = db.prepare("SELECT * FROM clients ORDER BY name ASC").all();
+    res.json(clients);
   });
 
   app.post("/api/clients", (req, res) => {
-    const { name } = req.body;
-    const result = db
-      .prepare("INSERT INTO clients (name) VALUES (?)")
-      .run(name);
-    res.json({ id: result.lastInsertRowid });
+    const { type, name, owner_name, property_name, since, address, email, phone, frequency, property_link } = req.body;
+    const info = db.prepare(`
+      INSERT INTO clients (type, name, owner_name, property_name, since, address, email, phone, frequency, property_link)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(type, name, owner_name, property_name, since, address, email, phone, frequency, property_link);
+    res.json({ id: info.lastInsertRowid });
   });
 
-  /* ===== VITE ===== */
+  // Staff Routes
+  app.get("/api/staff", (req, res) => {
+    const staff = db.prepare("SELECT * FROM staff ORDER BY name ASC").all();
+    res.json(staff);
+  });
 
+  app.post("/api/staff", (req, res) => {
+    const { name, email, phone } = req.body;
+    const info = db.prepare("INSERT INTO staff (name, email, phone) VALUES (?, ?, ?)").run(name, email, phone);
+    res.json({ id: info.lastInsertRowid });
+  });
+
+  app.get("/api/jobs", (req, res) => {
+    const jobs = db.prepare(`
+      SELECT jobs.*, 
+             clients.name as client_name, 
+             clients.type as client_type, 
+             clients.address as client_address,
+             staff.name as staff_name
+      FROM jobs 
+      JOIN clients ON jobs.client_id = clients.id
+      LEFT JOIN staff ON jobs.staff_id = staff.id
+      ORDER BY cleaning_date DESC, cleaning_time ASC
+    `).all();
+    res.json(jobs);
+  });
+
+  app.post("/api/jobs", (req, res) => {
+    const { client_id, staff_id, service_type, service_value, staff_value, cleaning_date, cleaning_time, notes } = req.body;
+    const info = db.prepare(`
+      INSERT INTO jobs (client_id, staff_id, service_type, service_value, staff_value, cleaning_date, cleaning_time, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(client_id, staff_id, service_type, service_value, staff_value, cleaning_date, cleaning_time, notes);
+    
+    // Broadcast new job
+    broadcast({ type: 'JOB_CREATED', data: { id: info.lastInsertRowid, client_id, staff_id } });
+    
+    res.json({ id: info.lastInsertRowid });
+  });
+
+  app.patch("/api/jobs/:id", (req, res) => {
+    const { id } = req.params;
+    const { status, payment_date, payment_method, photos_before, photos_after, staff_id } = req.body;
+    
+    const updates = [];
+    const params = [];
+    
+    if (status) { updates.push("status = ?"); params.push(status); }
+    if (payment_date) { updates.push("payment_date = ?"); params.push(payment_date); }
+    if (payment_method) { updates.push("payment_method = ?"); params.push(payment_method); }
+    if (photos_before) { updates.push("photos_before = ?"); params.push(photos_before); }
+    if (photos_after) { updates.push("photos_after = ?"); params.push(photos_after); }
+    if (staff_id) { updates.push("staff_id = ?"); params.push(staff_id); }
+    
+    if (updates.length === 0) return res.status(400).json({ error: "No fields to update" });
+    
+    params.push(id);
+    db.prepare(`UPDATE jobs SET ${updates.join(", ")} WHERE id = ?`).run(...params);
+    
+    // Broadcast update
+    broadcast({ type: 'JOB_UPDATED', id, status });
+    
+    res.json({ success: true });
+  });
+
+  app.get("/api/stats", (req, res) => {
+    const revenue = db.prepare("SELECT SUM(service_value) as total FROM jobs WHERE status = 'Finished'").get() as any;
+    const staffPay = db.prepare("SELECT SUM(staff_value) as total FROM jobs WHERE status = 'Finished'").get() as any;
+    const jobCount = db.prepare("SELECT COUNT(*) as total FROM jobs WHERE status = 'Finished'").get() as any;
+    const clientCount = db.prepare("SELECT COUNT(*) as total FROM clients").get() as any;
+    const staffCount = db.prepare("SELECT COUNT(*) as total FROM staff WHERE status = 'Active'").get() as any;
+    const pendingPayments = db.prepare("SELECT COUNT(*) as total FROM jobs WHERE status = 'Finished' AND (payment_date IS NULL OR payment_date = '')").get() as any;
+
+    res.json({
+      revenue: revenue.total || 0,
+      staffPay: staffPay.total || 0,
+      profit: (revenue.total || 0) - (staffPay.total || 0),
+      jobCount: jobCount.total || 0,
+      clientCount: clientCount.total || 0,
+      staffCount: staffCount.total || 0,
+      pendingPayments: pendingPayments.total || 0
+    });
+  });
+
+  app.post("/api/quotations", (req, res) => {
+    const { type, inputs, total_value } = req.body;
+    const info = db.prepare(`
+      INSERT INTO quotations (type, inputs, total_value)
+      VALUES (?, ?, ?)
+    `).run(type, JSON.stringify(inputs), total_value);
+    res.json({ id: info.lastInsertRowid });
+  });
+
+  app.get("/api/stats/filtered", (req, res) => {
+    const { start, end } = req.query;
+    let query = "SELECT SUM(service_value) as revenue, SUM(staff_value) as staffPay, COUNT(*) as jobCount FROM jobs WHERE status = 'Finished'";
+    const params = [];
+
+    if (start && end) {
+      query += " AND cleaning_date BETWEEN ? AND ?";
+      params.push(start, end);
+    }
+
+    const stats = db.prepare(query).get(...params);
+    
+    // Get daily breakdown for chart
+    let chartQuery = "SELECT cleaning_date as date, SUM(service_value) as revenue, SUM(staff_value) as staffPay FROM jobs WHERE status = 'Finished'";
+    if (start && end) {
+      chartQuery += " AND cleaning_date BETWEEN ? AND ?";
+    }
+    chartQuery += " GROUP BY cleaning_date ORDER BY cleaning_date ASC";
+    
+    const chartData = db.prepare(chartQuery).all(...params);
+
+    res.json({
+      revenue: stats.revenue || 0,
+      staffPay: stats.staffPay || 0,
+      profit: (stats.revenue || 0) - (stats.staffPay || 0),
+      jobCount: stats.jobCount || 0,
+      chartData: chartData.map((d: any) => ({
+        ...d,
+        profit: d.revenue - d.staffPay
+      }))
+    });
+  });
+
+  // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -235,13 +306,13 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     app.use(express.static(path.join(__dirname, "dist")));
-    app.get("*", (_, res) => {
-      res.sendFile(path.join(__dirname, "dist/index.html"));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(__dirname, "dist", "index.html"));
     });
   }
 
-  server.listen(PORT, "0.0.0.0", () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
+  httpServer.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on http://localhost:${PORT}`);
   });
 }
 

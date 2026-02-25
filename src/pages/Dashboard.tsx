@@ -1,409 +1,366 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../services/firebase';
-import { useAuth } from '../hooks/useAuth';
-import { useLanguage } from '../contexts/LanguageContext';
-import { Client, Cleaning, UserProfile } from '../types';
 import { 
+  TrendingUp, 
   Users, 
   Calendar, 
   DollarSign, 
-  TrendingUp, 
-  Plus,
-  ChevronRight,
-  MapPin,
+  ArrowUpRight, 
+  ArrowDownRight,
   Clock,
-  User,
-  RefreshCw,
-  MessageSquare,
-  Image as ImageIcon,
-  X,
-  Maximize2,
-  Camera,
-  Info
+  MapPin,
+  CheckCircle2,
+  Calculator,
+  Activity,
+  ChevronRight
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Link, useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
+import { formatCurrency, cn } from '../lib/utils';
+import { Stats, Job, AppUser } from '../types';
+import { firebaseService } from '../services/firebaseService';
+import { useLanguage } from '../contexts/LanguageContext';
 
-export default function Dashboard() {
-  const { isAdmin, user } = useAuth();
-  const { t } = useLanguage();
-  const navigate = useNavigate();
-  const [clients, setClients] = useState<Client[]>([]);
-  const [cleanings, setCleanings] = useState<Cleaning[]>([]);
-  const [staffList, setStaffList] = useState<UserProfile[]>([]);
+export default function Dashboard({ user }: { user: AppUser }) {
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [recentJobs, setRecentJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCleaning, setSelectedCleaning] = useState<Cleaning | null>(null);
-  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const { t } = useLanguage();
+  
+  // Normalize role
+  const role = (user.role.charAt(0).toUpperCase() + user.role.slice(1).toLowerCase()) as UserRole;
 
   useEffect(() => {
-    const today = format(new Date(), 'yyyy-MM-dd');
-    
-    const unsubClients = db.collection('clients').onSnapshot((snapshot) => {
-      setClients(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Client)));
-    });
-
-    const unsubCleanings = db.collection('cleanings')
-      .where('date', '==', today)
-      .onSnapshot((snapshot) => {
-        setCleanings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Cleaning)));
+    const fetchData = async () => {
+      try {
+        const [statsData, jobsData] = await Promise.all([
+          firebaseService.getStats(),
+          firebaseService.getJobs()
+        ]);
+        setStats(statsData);
+        
+        // Filter jobs based on role and related_id
+        if (role === 'Client' && user.related_id) {
+          setRecentJobs(jobsData.filter(j => j.client_id === user.related_id).slice(0, 5));
+        } else if (role === 'Staff' && user.related_id) {
+          // Filter by assigned staff
+          setRecentJobs(jobsData.filter(j => j.staff_id === user.related_id).slice(0, 5));
+        } else if (role === 'Client') {
+          // Demo fallback
+          setRecentJobs(jobsData.filter(j => j.client_id === jobsData[0]?.client_id).slice(0, 5));
+        } else {
+          setRecentJobs(jobsData.slice(0, 5));
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
         setLoading(false);
-      });
-
-    if (isAdmin) {
-      const unsubStaff = db.collection('users')
-        .where('role', '==', 'staff')
-        .onSnapshot((snapshot) => {
-          setStaffList(snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile)));
-        });
-      return () => {
-        unsubClients();
-        unsubCleanings();
-        unsubStaff();
-      };
-    }
-
-    return () => {
-      unsubClients();
-      unsubCleanings();
+      }
     };
-  }, [isAdmin]);
+    fetchData();
+  }, [role, user.related_id]);
 
-  const handleAssignStaff = async (cleaningId: string, staffId: string) => {
-    const staff = staffList.find(s => s.uid === staffId);
-    if (!staff) return;
-    
-    await db.collection('cleanings').doc(cleaningId).update({
-      assignedStaffId: staff.uid,
-      assignedStaffName: staff.name
-    });
-  };
-
-  const totalRevenue = clients.reduce((acc, c) => acc + (c.serviceValue || 0), 0);
-  const totalTeamPayment = clients.reduce((acc, c) => acc + (c.teamPaymentValue || 0), 0);
-  const totalProfit = totalRevenue - totalTeamPayment;
-
-  if (loading) return <div className="p-8 text-center">{t('processing')}</div>;
+  if (loading) return <div className="flex items-center justify-center h-64">{t('loading')}</div>;
 
   return (
-    <div className="space-y-8">
-      <header className="flex justify-between items-end">
-        <div>
-          <h1 className="text-3xl font-bold text-petrol">{t('welcome')}, {user?.name}</h1>
-          <p className="text-slate-500">{t('todaySummary')}.</p>
-        </div>
-        {isAdmin && (
-          <Link to="/clients/new" className="btn-primary flex items-center gap-2">
-            <Plus size={20} />
-            {t('registerClient')}
-          </Link>
-        )}
+    <div className="space-y-10">
+      <header>
+        <h2 className="text-3xl font-black text-slate-900 tracking-tight">
+          {t('welcome')}, {role === 'Admin' ? 'Ana' : role === 'Staff' ? 'Team' : 'Valued Client'}!
+        </h2>
+        <p className="text-slate-500 mt-1 font-medium">
+          {role === 'Client' ? 'View your cleaning services and details.' : role === 'Staff' ? 'Check your assigned tasks and earnings.' : t('manage_tasks')}
+        </p>
       </header>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <motion.div whileHover={{ y: -5 }} className="card flex items-center gap-4">
-          <div className="p-3 bg-petrol/10 rounded-xl text-petrol">
-            <Users size={24} />
-          </div>
-          <div>
-            <p className="text-sm text-slate-500">{t('activeClients')}</p>
-            <p className="text-2xl font-bold">{clients.length}</p>
-          </div>
-        </motion.div>
+      {/* Stats Grid - Admin Only (Financials) */}
+      {role === 'Admin' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard 
+            title={t('total_revenue')} 
+            value={formatCurrency(stats?.revenue || 0)} 
+            trend="+12.5%" 
+            trendType="up"
+            icon={TrendingUp} 
+            color="text-emerald-600"
+            bg="bg-emerald-50"
+          />
+          <StatCard 
+            title={t('active_jobs')} 
+            value={stats?.jobCount.toString() || "0"} 
+            trend={t('today')} 
+            trendType="up"
+            icon={Calendar} 
+            color="text-blue-600"
+            bg="bg-blue-50"
+          />
+          <StatCard 
+            title={t('pending_payments')} 
+            value={stats?.pendingPayments?.toString() || "0"} 
+            trend="Alert" 
+            trendType="down"
+            icon={DollarSign} 
+            color="text-gold"
+            bg="bg-gold/5"
+          />
+          <StatCard 
+            title={t('team')} 
+            value={stats?.staffCount?.toString() || "0"} 
+            trend="Active" 
+            trendType="up"
+            icon={Users} 
+            color="text-indigo-600"
+            bg="bg-indigo-50"
+          />
+        </div>
+      )}
 
-        <motion.div whileHover={{ y: -5 }} className="card flex items-center gap-4">
-          <div className="p-3 bg-blue-100 rounded-xl text-blue-600">
-            <Calendar size={24} />
+      {/* Stats Grid - Staff Only */}
+      {role === 'Staff' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <StatCard 
+            title="Assigned Jobs" 
+            value={recentJobs.length.toString()} 
+            trend="Active" 
+            trendType="up"
+            icon={Calendar} 
+            color="text-blue-600"
+            bg="bg-blue-50"
+          />
+          <StatCard 
+            title="Total Earnings" 
+            value={formatCurrency(recentJobs.reduce((acc, j) => acc + (j.staff_value || 0), 0))} 
+            trend="Confirmed" 
+            trendType="up"
+            icon={DollarSign} 
+            color="text-emerald-600"
+            bg="bg-emerald-50"
+          />
+          <StatCard 
+            title="Completed" 
+            value={recentJobs.filter(j => j.status === 'Finished').length.toString()} 
+            trend="Success" 
+            trendType="up"
+            icon={CheckCircle2} 
+            color="text-indigo-600"
+            bg="bg-indigo-50"
+          />
+        </div>
+      )}
+
+      {/* Stats Grid - Client Only */}
+      {role === 'Client' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <StatCard 
+            title="Next Cleaning" 
+            value={recentJobs.find(j => j.status !== 'Finished')?.cleaning_date || 'Not scheduled'} 
+            trend="Upcoming" 
+            trendType="up"
+            icon={Calendar} 
+            color="text-blue-600"
+            bg="bg-blue-50"
+          />
+          <StatCard 
+            title="Total Cleanings" 
+            value={recentJobs.length.toString()} 
+            trend="History" 
+            trendType="up"
+            icon={CheckCircle2} 
+            color="text-emerald-600"
+            bg="bg-emerald-50"
+          />
+          <StatCard 
+            title="Service Value" 
+            value={formatCurrency(recentJobs[0]?.service_value || 0)} 
+            trend="Per visit" 
+            trendType="up"
+            icon={DollarSign} 
+            color="text-gold"
+            bg="bg-gold/5"
+          />
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Live Activity Feed */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <Activity className="w-5 h-5 text-petroleum" />
+              {role === 'Client' ? 'Your Cleanings' : t('recent_jobs')}
+            </h3>
+            <button className="text-sm font-bold text-petroleum hover:underline">{t('view_all')}</button>
           </div>
-          <div>
-            <p className="text-sm text-slate-500">{t('upcomingCleanings')}</p>
-            <p className="text-2xl font-bold">{cleanings.length}</p>
-          </div>
-        </motion.div>
-
-        {isAdmin && (
-          <>
-            <motion.div whileHover={{ y: -5 }} className="card flex items-center gap-4">
-              <div className="p-3 bg-emerald-100 rounded-xl text-emerald-600">
-                <DollarSign size={24} />
-              </div>
-              <div>
-                <p className="text-sm text-slate-500">{t('totalRevenue')}</p>
-                <p className="text-2xl font-bold">${totalRevenue.toLocaleString()}</p>
-              </div>
-            </motion.div>
-
-            <motion.div whileHover={{ y: -5 }} className="card flex items-center gap-4">
-              <div className="p-3 bg-gold-light rounded-xl text-gold">
-                <TrendingUp size={24} />
-              </div>
-              <div>
-                <p className="text-sm text-slate-500">{t('totalRevenue')} (Net)</p>
-                <p className="text-2xl font-bold">${totalProfit.toLocaleString()}</p>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </div>
-
-      {/* Today's Schedule */}
-      <section className="space-y-4">
-        <h2 className="text-xl font-bold text-petrol flex items-center gap-2">
-          <Clock size={20} />
-          {t('upcomingCleanings')} - {format(new Date(), 'dd/MM/yyyy')}
-        </h2>
-        <div className="grid grid-cols-1 gap-4">
-          {cleanings.length > 0 ? cleanings.map(cleaning => (
-            <div key={cleaning.id} className="card hover:border-petrol transition-colors group">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="flex gap-4 items-center flex-1">
-                  <div className={`w-2 h-12 rounded-full ${cleaning.clientType === 'airbnb' ? 'bg-gold' : 'bg-petrol'}`} />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-lg">{cleaning.clientName}</h3>
-                      <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${cleaning.status === 'completed' ? 'bg-emerald-100 text-emerald-600' : 'bg-gold/10 text-gold'}`}>
-                        {t(cleaning.status)}
+          
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+            {recentJobs.length > 0 ? (
+              <div className="divide-y divide-slate-50">
+                {recentJobs.map((job) => (
+                  <div key={job.id} className="p-6 hover:bg-slate-50/50 transition-colors group">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className={ClockBadgeStyle(job.status)}>
+                          {job.status === 'Finished' ? <CheckCircle2 className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-slate-900">{job.client_name}</h4>
+                          <p className="text-xs text-slate-500 font-medium">{job.service_type}</p>
+                        </div>
+                      </div>
+                      <span className={cn(
+                        "text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest",
+                        job.status === 'Finished' ? "bg-emerald-50 text-emerald-600" : "bg-blue-50 text-blue-600"
+                      )}>
+                        {t(job.status.toLowerCase().replace(/ /g, '_'))}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-slate-500 text-sm">
-                      <MapPin size={14} />
-                      {cleaning.clientAddress}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4 text-xs text-slate-400 font-medium">
+                        <div className="flex items-center gap-1.5">
+                          <MapPin className="w-3.5 h-3.5" />
+                          <span className="truncate max-w-[150px]">{job.client_address}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Users className="w-3.5 h-3.5" />
+                          <span>{job.staff_name || t('unassigned')}</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-petroleum transition-colors" />
                     </div>
                   </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-6 w-full md:w-auto">
-                  <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-xl border border-slate-100">
-                    <User size={18} className="text-petrol" />
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-400 uppercase font-bold leading-none mb-1">{t('staff')}</span>
-                      {isAdmin ? (
-                        <select 
-                          className="bg-transparent text-sm font-bold text-petrol outline-none cursor-pointer"
-                          value={cleaning.assignedStaffId || ''}
-                          onChange={(e) => handleAssignStaff(cleaning.id!, e.target.value)}
-                        >
-                          <option value="">{t('selectStaff')}</option>
-                          {staffList.map(staff => (
-                            <option key={staff.uid} value={staff.uid}>{staff.name}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span className="text-sm font-bold text-petrol">{cleaning.assignedStaffName || '---'}</span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="text-right ml-auto md:ml-0 flex flex-col items-end gap-1">
-                    <p className="text-xs text-slate-400 uppercase tracking-wider">{t('teamPay')}</p>
-                    <p className="font-bold text-petrol">${cleaning.teamPaymentValue}</p>
-                    <div className="flex gap-2">
-                      {cleaning.staffNotes && <MessageSquare size={14} className="text-blue-500" title={cleaning.staffNotes} />}
-                      {(cleaning.photosBefore?.length || 0) + (cleaning.photosAfter?.length || 0) + (cleaning.extraPhotos?.length || 0) > 0 && (
-                        <ImageIcon size={14} className="text-emerald-500" />
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => setSelectedCleaning(cleaning)}
-                      className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-petrol"
-                      title="View Details"
-                    >
-                      <Maximize2 size={20} />
-                    </button>
-                    <button 
-                      onClick={() => navigate(`/clients/${cleaning.clientId}`)}
-                      className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-                    >
-                      <ChevronRight className="text-slate-300 group-hover:text-petrol transition-colors" />
-                    </button>
-                  </div>
-                </div>
+                ))}
               </div>
-            </div>
-          )) : (
-            <div className="card text-center py-12 text-slate-400">
-              {t('noCleaningsToday')}
+            ) : (
+              <div className="p-12 text-center text-slate-400">
+                <Calendar className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                <p>{t('no_data')}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Quick Actions / Summary */}
+        <div className="space-y-6">
+          <h3 className="text-xl font-bold text-slate-900">{t('actions')}</h3>
+          <div className="grid grid-cols-1 gap-4">
+            {role !== 'Client' ? (
+              <>
+                <QuickActionCard 
+                  title={t('quotation_calculator')} 
+                  description={t('generate_estimates')} 
+                  icon={Calculator} 
+                  color="bg-gold/10 text-gold" 
+                />
+                <QuickActionCard 
+                  title={t('add_new_client')} 
+                  description={t('manage_clients')} 
+                  icon={Users} 
+                  color="bg-petroleum/10 text-petroleum" 
+                />
+                <QuickActionCard 
+                  title={t('new_job')} 
+                  description={t('manage_tasks')} 
+                  icon={Calendar} 
+                  color="bg-indigo-50 text-indigo-600" 
+                />
+              </>
+            ) : (
+              <>
+                <QuickActionCard 
+                  title="Request Cleaning" 
+                  description="Schedule your next visit" 
+                  icon={Calendar} 
+                  color="bg-indigo-50 text-indigo-600" 
+                />
+                <QuickActionCard 
+                  title="Message Support" 
+                  description="Contact Ana directly" 
+                  icon={Users} 
+                  color="bg-petroleum/10 text-petroleum" 
+                />
+                <QuickActionCard 
+                  title="Payment Methods" 
+                  description="Manage how you pay" 
+                  icon={DollarSign} 
+                  color="bg-gold/10 text-gold" 
+                />
+              </>
+            )}
+          </div>
+
+          {role !== 'Client' && (
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">{t('team')}</h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gold/20 flex items-center justify-center text-gold">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                    <span className="text-sm font-medium">Active Staff</span>
+                  </div>
+                  <span className="font-bold">{stats?.staffCount || 0}</span>
+                </div>
+                {role === 'Admin' && (
+                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-petroleum/10 flex items-center justify-center text-petroleum">
+                        <DollarSign className="w-4 h-4" />
+                      </div>
+                      <span className="text-sm font-medium">{t('staff_payouts')}</span>
+                    </div>
+                    <span className="font-bold text-red-500">{formatCurrency(stats?.staffPay || 0)}</span>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
-      </section>
-
-      {/* Cleaning Details Modal */}
-      <AnimatePresence>
-        {selectedCleaning && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white w-full max-w-4xl p-8 rounded-3xl shadow-2xl relative max-h-[90vh] overflow-y-auto"
-            >
-              <button 
-                onClick={() => setSelectedCleaning(null)}
-                className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-full transition-colors"
-              >
-                <X size={20} className="text-slate-400" />
-              </button>
-
-              <div className="mb-8">
-                <div className="flex items-center gap-3 mb-2">
-                  <h2 className="text-2xl font-bold text-petrol">{selectedCleaning.clientName}</h2>
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${selectedCleaning.clientType === 'airbnb' ? 'bg-gold/10 text-gold' : 'bg-petrol/10 text-petrol'}`}>
-                    {t(selectedCleaning.clientType)}
-                  </span>
-                </div>
-                <p className="text-slate-500 flex items-center gap-2">
-                  <MapPin size={16} />
-                  {selectedCleaning.clientAddress}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Info Section */}
-                <div className="space-y-6">
-                  <div className="bg-slate-50 p-6 rounded-2xl space-y-4 border border-slate-100">
-                    <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                      <Info size={18} className="text-petrol" />
-                      Service Info
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-[10px] text-slate-400 uppercase font-bold">{t('status')}</p>
-                        <p className={`text-sm font-bold ${selectedCleaning.status === 'completed' ? 'text-emerald-500' : 'text-gold'}`}>
-                          {t(selectedCleaning.status)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-slate-400 uppercase font-bold">{t('staff')}</p>
-                        <p className="text-sm font-bold text-petrol">{selectedCleaning.assignedStaffName || '---'}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-slate-400 uppercase font-bold">{t('teamPay')}</p>
-                        <p className="text-sm font-bold text-petrol">${selectedCleaning.teamPaymentValue}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-slate-400 uppercase font-bold">Service Date</p>
-                        <p className="text-sm font-bold text-petrol">{selectedCleaning.date}</p>
-                      </div>
-                      {clients.find(c => c.id === selectedCleaning.clientId)?.numberOfStaff && (
-                        <div>
-                          <p className="text-[10px] text-slate-400 uppercase font-bold">{t('numberOfStaff')}</p>
-                          <p className="text-sm font-bold text-petrol">{clients.find(c => c.id === selectedCleaning.clientId)?.numberOfStaff}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {selectedCleaning.notes && (
-                    <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100">
-                      <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-2">{t('notes')} (Admin)</p>
-                      <p className="text-sm text-blue-900 leading-relaxed">{selectedCleaning.notes}</p>
-                    </div>
-                  )}
-
-                  {selectedCleaning.staffNotes && (
-                    <div className="bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100">
-                      <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-2">{t('staffNotes')}</p>
-                      <p className="text-sm text-emerald-900 leading-relaxed">{selectedCleaning.staffNotes}</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Photos Section */}
-                <div className="space-y-6">
-                  <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                    <Camera size={18} className="text-petrol" />
-                    Cleaning Gallery
-                  </h3>
-                  
-                  <div className="space-y-4">
-                    {/* Before */}
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">{t('photosBefore')}</h4>
-                      <div className="flex gap-2 overflow-x-auto pb-2">
-                        {selectedCleaning.photosBefore?.map((url, i) => (
-                          <img 
-                            key={i} src={url} alt="Before" 
-                            className="w-20 h-20 object-cover rounded-xl cursor-pointer hover:opacity-80 transition-opacity" 
-                            onClick={() => setSelectedPhoto(url)}
-                          />
-                        ))}
-                        {(!selectedCleaning.photosBefore || selectedCleaning.photosBefore.length === 0) && (
-                          <div className="w-20 h-20 rounded-xl bg-slate-50 border border-dashed border-slate-200 flex items-center justify-center text-slate-300 text-[10px]">No photos</div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* After */}
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">{t('photosAfter')}</h4>
-                      <div className="flex gap-2 overflow-x-auto pb-2">
-                        {selectedCleaning.photosAfter?.map((url, i) => (
-                          <img 
-                            key={i} src={url} alt="After" 
-                            className="w-20 h-20 object-cover rounded-xl cursor-pointer hover:opacity-80 transition-opacity" 
-                            onClick={() => setSelectedPhoto(url)}
-                          />
-                        ))}
-                        {(!selectedCleaning.photosAfter || selectedCleaning.photosAfter.length === 0) && (
-                          <div className="w-20 h-20 rounded-xl bg-slate-50 border border-dashed border-slate-200 flex items-center justify-center text-slate-300 text-[10px]">No photos</div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Extra */}
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">{t('extraPhotos')}</h4>
-                      <div className="flex gap-2 overflow-x-auto pb-2">
-                        {selectedCleaning.extraPhotos?.map((url, i) => (
-                          <img 
-                            key={i} src={url} alt="Extra" 
-                            className="w-20 h-20 object-cover rounded-xl cursor-pointer hover:opacity-80 transition-opacity" 
-                            onClick={() => setSelectedPhoto(url)}
-                          />
-                        ))}
-                        {(!selectedCleaning.extraPhotos || selectedCleaning.extraPhotos.length === 0) && (
-                          <div className="w-20 h-20 rounded-xl bg-slate-50 border border-dashed border-slate-200 flex items-center justify-center text-slate-300 text-[10px]">No photos</div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Photo Preview Modal */}
-      <AnimatePresence>
-        {selectedPhoto && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="relative max-w-5xl w-full h-full flex items-center justify-center"
-            >
-              <button 
-                onClick={() => setSelectedPhoto(null)}
-                className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors z-10"
-              >
-                <X size={24} />
-              </button>
-              <img 
-                src={selectedPhoto} 
-                alt="Preview" 
-                className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
-              />
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      </div>
     </div>
   );
+}
+
+function StatCard({ title, value, icon: Icon, trend, trendType, color, bg }: any) {
+  return (
+    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between mb-4">
+        <div className={cn("p-3 rounded-2xl", bg, color)}>
+          <Icon className="w-6 h-6" />
+        </div>
+        <div className={cn(
+          "flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-widest",
+          trendType === 'up' ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"
+        )}>
+          {trendType === 'up' ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+          {trend}
+        </div>
+      </div>
+      <p className="text-sm font-medium text-slate-500">{title}</p>
+      <h4 className="text-2xl font-black text-slate-900 mt-1">{value}</h4>
+    </div>
+  );
+}
+
+function QuickActionCard({ title, description, icon: Icon, color }: any) {
+  return (
+    <button className="w-full bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:border-petroleum/30 hover:shadow-md transition-all text-left group">
+      <div className="flex items-center gap-4">
+        <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shrink-0", color)}>
+          <Icon className="w-6 h-6" />
+        </div>
+        <div>
+          <h4 className="font-bold text-slate-900 group-hover:text-petroleum transition-colors">{title}</h4>
+          <p className="text-xs text-slate-500 font-medium">{description}</p>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function ClockBadgeStyle(status: string) {
+  switch (status) {
+    case 'Finished': return "w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center";
+    case 'Cancelled': return "w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center";
+    case 'On the way': return "w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center";
+    case 'Started': return "w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center";
+    default: return "w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center";
+  }
 }

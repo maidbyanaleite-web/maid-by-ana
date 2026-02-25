@@ -1,50 +1,75 @@
+export type ClientType = 'Regular' | 'Airbnb';
+export type ServiceType = 'Regular' | 'Deep Clean' | 'Move-in' | 'Move-out';
+export type Frequency = 'Weekly' | 'Bi-weekly' | 'Monthly';
+export type JobStatus = 'Scheduled' | 'On the way' | 'Started' | 'Finished' | 'Cancelled';
+
 export interface Client {
-  id: number;
-  type: 'regular' | 'airbnb';
+  id: string;
+  type: ClientType;
   name: string;
+  owner_name?: string;
+  property_name?: string;
   since?: string;
   address?: string;
   email?: string;
   phone?: string;
-  frequency?: string;
-  property_name?: string;
+  frequency?: Frequency;
   property_link?: string;
-  reviews?: string;
+  created_at: string;
 }
 
-export interface Service {
-  id: number;
-  client_id: number;
-  client_name: string;
-  client_address: string;
-  client_type: 'regular' | 'airbnb';
-  service_type: string;
-  extras: string; // JSON string
+export interface Job {
+  id: string;
+  client_id: string;
+  client_name?: string;
+  client_type?: ClientType;
+  client_address?: string;
+  service_type: ServiceType;
   service_value: number;
-  staff_pay: number;
-  service_date: string;
+  staff_value: number;
+  cleaning_date: string;
   payment_date?: string;
   payment_method?: string;
-  status: 'scheduled' | 'completed' | 'paid';
-  photos_before?: string;
-  photos_after?: string;
-}
-
-export interface Quotation {
-  id: number;
-  client_name: string;
-  type: 'hourly' | 'detailed';
-  inputs: string;
-  total_value: number;
-  created_at: string;
+  status: JobStatus;
+  notes?: string;
+  photos?: string[];
+  photos_before?: string; // JSON string array
+  photos_after?: string; // JSON string array
 }
 
 export interface Stats {
   revenue: number;
   staffPay: number;
   profit: number;
-  clients: number;
-  services: number;
+  jobCount: number;
+  clientCount: number;
+  staffCount: number;
+  pendingPayments: number;
 }
 
-export type UserRole = 'admin' | 'staff';
+export interface Quotation {
+  id: string;
+  type: 'Hourly' | 'Detailed';
+  inputs: string; // JSON
+  total_value: number;
+  status?: string;
+  created_at: string;
+}
+
+export interface Staff {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  status: 'Active' | 'Inactive';
+  created_at: string;
+}
+
+export type UserRole = 'Admin' | 'Staff' | 'Client';
+
+export interface AppUser {
+  uid: string;
+  email: string;
+  role: UserRole;
+  related_id?: string; // client_id or staff_id
+}
