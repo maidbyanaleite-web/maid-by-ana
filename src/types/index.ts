@@ -77,3 +77,16 @@ export interface BudgetResult {
   estimatedTime: number;
   totalValue: number;
 }
+
+export interface PricingSettings {
+  lightCleaning: number;
+  mediumCleaning: number;
+  deepCleaning: number;
+  petAddon: number;
+  windowAddon: number;
+  fridgeAddon: number;
+  ovenAddon: number;
+  bedroomAddon: number;
+  roomAddon: number;
+  bathroomAddon: number;
+}

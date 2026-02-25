@@ -15,6 +15,7 @@ export default function NewClient() {
     frequency: 'semanal',
     serviceType: 'regular',
     paymentMethod: 'cash',
+    clientSince: new Date().toISOString().split('T')[0],
     extras: { fridge: false, oven: false },
     gallery: [],
     cleaningDates: [],
@@ -37,7 +38,7 @@ export default function NewClient() {
     try {
       await db.collection('clients').add({
         ...formData,
-        clientSince: new Date().toISOString().split('T')[0]
+        clientSince: formData.clientSince || new Date().toISOString().split('T')[0]
       });
       navigate('/');
     } catch (err) {
@@ -66,6 +67,10 @@ export default function NewClient() {
             <div>
               <label className="block text-sm font-medium text-slate-600 mb-1">{t('clientName')}</label>
               <input type="text" required className="input" onChange={e => setFormData({...formData, name: e.target.value})} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-600 mb-1">{t('clientSince')}</label>
+              <input type="date" required className="input" value={formData.clientSince} onChange={e => setFormData({...formData, clientSince: e.target.value})} />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-600 mb-1">{t('clientType')}</label>

@@ -236,7 +236,7 @@ export default function ClientDetails() {
                 </div>
                 <div className="flex items-center gap-3 text-slate-600">
                   <Calendar size={18} className="text-petrol" />
-                  {t('appName')}: {client.clientSince}
+                  {t('clientSince')}: {client.clientSince}
                 </div>
               </div>
               <div className="space-y-4 relative">
