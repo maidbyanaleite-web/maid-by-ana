@@ -103,6 +103,7 @@ export const translations = {
     save: 'Save',
     viewDetails: 'View Details',
     scheduledTime: 'Scheduled Time',
+    generalNotes: 'General Requests/Observations',
   },
   pt: {
     appName: 'Maid By Ana',
@@ -206,5 +207,6 @@ export const translations = {
     save: 'Salvar',
     viewDetails: 'Ver Detalhes',
     scheduledTime: 'Hora Agendada',
+    generalNotes: 'Solicitações/Observações Gerais',
   }
 };

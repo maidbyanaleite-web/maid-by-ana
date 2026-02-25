@@ -46,6 +46,7 @@ export interface Client {
   nextPaymentDue?: string;
   assignedStaffIds?: string[];
   numberOfStaff?: number;
+  generalNotes?: string;
 }
 
 export interface Cleaning {

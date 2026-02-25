@@ -31,6 +31,14 @@ export default function ClientDashboard() {
   const [selectedCleaning, setSelectedCleaning] = useState<Cleaning | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [feedback, setFeedback] = useState('');
+  const [generalNotes, setGeneralNotes] = useState('');
+  const [isEditingGeneralNotes, setIsEditingGeneralNotes] = useState(false);
+
+  useEffect(() => {
+    if (clientData?.generalNotes) {
+      setGeneralNotes(clientData.generalNotes);
+    }
+  }, [clientData]);
 
   useEffect(() => {
     if (!user?.clientId) {
@@ -46,9 +54,14 @@ export default function ClientDashboard() {
 
     const unsubCleanings = db.collection('cleanings')
       .where('clientId', '==', user.clientId)
-      .orderBy('date', 'desc')
       .onSnapshot((snapshot) => {
-        setCleanings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Cleaning)));
+        const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Cleaning));
+        // Sort by date descending in memory to avoid index issues
+        docs.sort((a, b) => b.date.localeCompare(a.date));
+        setCleanings(docs);
+        setLoading(false);
+      }, (error) => {
+        console.error("Error fetching cleanings:", error);
         setLoading(false);
       });
 
@@ -85,6 +98,14 @@ export default function ClientDashboard() {
     if (selectedCleaning?.id === cleaningId) {
       setSelectedCleaning({ ...selectedCleaning, photosByClient: nextPhotos });
     }
+  };
+
+  const handleUpdateGeneralNotes = async () => {
+    if (!user?.clientId) return;
+    await db.collection('clients').doc(user.clientId).update({
+      generalNotes: generalNotes
+    });
+    setIsEditingGeneralNotes(false);
   };
 
   const nextCleaning = cleanings.find(c => c.date === format(new Date(), 'yyyy-MM-dd'));
@@ -228,6 +249,60 @@ export default function ClientDashboard() {
               </div>
             </div>
           </div>
+
+          {/* General Requests Card */}
+          <div className="card bg-white border border-slate-100">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-petrol flex items-center gap-2">
+                <MessageSquare size={20} className="text-gold" />
+                {t('generalNotes')}
+              </h2>
+              {!isEditingGeneralNotes && (
+                <button 
+                  onClick={() => setIsEditingGeneralNotes(true)}
+                  className="text-xs font-bold text-petrol hover:text-gold transition-colors"
+                >
+                  {t('editClient')}
+                </button>
+              )}
+            </div>
+            
+            {isEditingGeneralNotes ? (
+              <div className="space-y-3">
+                <textarea 
+                  className="w-full p-4 rounded-2xl border border-slate-200 focus:border-petrol outline-none transition-all text-sm min-h-[120px]"
+                  value={generalNotes}
+                  onChange={(e) => setGeneralNotes(e.target.value)}
+                  placeholder={t('generalNotes') + '...'}
+                />
+                <div className="flex gap-2">
+                  <button 
+                    onClick={handleUpdateGeneralNotes}
+                    className="flex-1 btn-primary py-2 text-sm"
+                  >
+                    {t('save')}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setIsEditingGeneralNotes(false);
+                      setGeneralNotes(clientData?.generalNotes || '');
+                    }}
+                    className="flex-1 bg-slate-100 text-slate-600 rounded-xl py-2 text-sm font-bold hover:bg-slate-200 transition-all"
+                  >
+                    {t('cancel')}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 min-h-[100px]">
+                {clientData.generalNotes ? (
+                  <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{clientData.generalNotes}</p>
+                ) : (
+                  <p className="text-sm text-slate-400 italic">{t('addFeedback')}...</p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Cleaning History */}
@@ -283,9 +358,16 @@ export default function ClientDashboard() {
                             {t('startTime')}: {cleaning.startTime}
                           </span>
                         )}
-                        <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1 ml-auto">
-                          <Users size={10} />
-                          {cleaning.assignedStaffIds?.length || clientData.numberOfStaff || 1} {t('staff')}
+                        <span className="text-[10px] font-bold text-slate-400 flex flex-col items-end gap-1 ml-auto">
+                          <div className="flex items-center gap-1">
+                            <Users size={10} />
+                            {cleaning.assignedStaffIds?.length || clientData.numberOfStaff || 1} {t('staff')}
+                          </div>
+                          {cleaning.assignedStaffNames && cleaning.assignedStaffNames.length > 0 && (
+                            <div className="text-[8px] opacity-70">
+                              {cleaning.assignedStaffNames.join(', ')}
+                            </div>
+                          )}
                         </span>
                       </div>
                     </div>
@@ -333,6 +415,9 @@ export default function ClientDashboard() {
                 <div className="text-right">
                   <p className="text-xs text-slate-400 uppercase font-bold">{t('numberOfStaff')}</p>
                   <p className="text-lg font-bold text-petrol">{selectedCleaning.assignedStaffIds?.length || clientData.numberOfStaff || 1}</p>
+                  {selectedCleaning.assignedStaffNames && selectedCleaning.assignedStaffNames.length > 0 && (
+                    <p className="text-xs text-slate-500">{selectedCleaning.assignedStaffNames.join(', ')}</p>
+                  )}
                 </div>
               </div>
 
@@ -389,6 +474,22 @@ export default function ClientDashboard() {
                           />
                         ))}
                         {(!selectedCleaning.photosAfter || selectedCleaning.photosAfter.length === 0) && (
+                          <div className="w-24 h-24 rounded-xl bg-slate-50 border border-dashed border-slate-200 flex items-center justify-center text-slate-300 text-[10px]">No photos</div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">{t('extraPhotos')}</h4>
+                      <div className="flex gap-2 overflow-x-auto pb-2">
+                        {selectedCleaning.extraPhotos?.map((url, i) => (
+                          <img 
+                            key={i} src={url} alt="Extra" 
+                            className="w-24 h-24 object-cover rounded-xl cursor-pointer hover:opacity-80 transition-opacity" 
+                            onClick={() => setSelectedPhoto(url)}
+                          />
+                        ))}
+                        {(!selectedCleaning.extraPhotos || selectedCleaning.extraPhotos.length === 0) && (
                           <div className="w-24 h-24 rounded-xl bg-slate-50 border border-dashed border-slate-200 flex items-center justify-center text-slate-300 text-[10px]">No photos</div>
                         )}
                       </div>
