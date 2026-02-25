@@ -8,7 +8,10 @@ service cloud.firestore {
 
     // Helper function to check if user is the assigned staff
     function isAssignedStaff(data) {
-      return request.auth != null && data.assignedStaffId == request.auth.uid;
+      return request.auth != null && (
+        data.assignedStaffId == request.auth.uid || 
+        (data.assignedStaffIds != null && request.auth.uid in data.assignedStaffIds)
+      );
     }
 
     // Helper function to check if user is the client
@@ -31,7 +34,7 @@ service cloud.firestore {
       allow create: if isAdmin();
       allow update: if isAdmin() || (
         isAssignedStaff(resource.data) && 
-        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['serviceValue', 'teamPaymentValue', 'assignedStaffId', 'clientId', 'date'])
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['serviceValue', 'teamPaymentValue', 'assignedStaffId', 'assignedStaffIds', 'clientId', 'date'])
       ) || (
         isClient(resource.data.clientId) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clientFeedback'])

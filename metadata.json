@@ -1,7 +1,5 @@
 {
   "name": "Maid By Ana",
-  "description": "Cleaning management system for residential and Airbnb services, featuring quotations, financial control, and receipt generation.",
-  "requestFramePermissions": [
-    "camera"
-  ]
+  "description": "Professional cleaning management system with client tracking, budgeting, and receipt generation.",
+  "requestFramePermissions": []
 }

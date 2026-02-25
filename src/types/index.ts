@@ -44,7 +44,7 @@ export interface Client {
   budgetRequested?: boolean;
   budgetSent?: boolean;
   nextPaymentDue?: string;
-  assignedStaffId?: string;
+  assignedStaffIds?: string[];
   numberOfStaff?: number;
 }
 
@@ -55,15 +55,19 @@ export interface Cleaning {
   clientAddress: string;
   clientType: ClientType;
   date: string;
-  assignedStaffId: string;
-  assignedStaffName: string;
+  assignedStaffIds: string[];
+  assignedStaffNames: string[];
   serviceValue: number;
   teamPaymentValue: number;
-  status: 'scheduled' | 'completed';
+  status: 'scheduled' | 'on_the_way' | 'in_progress' | 'completed';
+  startTime?: string;
+  estimatedArrival?: string;
+  scheduledTime?: string;
   notes?: string;
   photosBefore?: string[];
   photosAfter?: string[];
   extraPhotos?: string[];
+  photosByClient?: string[];
   staffNotes?: string;
   clientFeedback?: string;
 }

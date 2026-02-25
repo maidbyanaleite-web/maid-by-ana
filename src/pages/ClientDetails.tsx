@@ -80,14 +80,18 @@ export default function ClientDetails() {
     const cleaningDate = prompt(t('addCleaning') + ' (YYYY-MM-DD)', format(new Date(), 'yyyy-MM-dd'));
     if (!cleaningDate) return;
 
+    const scheduledTime = prompt(t('scheduledTime') + ' (HH:MM)', '09:00');
+    if (!scheduledTime) return;
+
     const newCleaning: Partial<Cleaning> = {
       clientId: id,
       clientName: client.name,
       clientAddress: client.address,
       clientType: client.type,
       date: cleaningDate,
-      assignedStaffId: '',
-      assignedStaffName: '',
+      scheduledTime: scheduledTime,
+      assignedStaffIds: client.assignedStaffIds || [],
+      assignedStaffNames: staffList.filter(s => (client.assignedStaffIds || []).includes(s.uid)).map(s => s.name),
       serviceValue: client.serviceValue,
       teamPaymentValue: client.teamPaymentValue,
       status: 'scheduled',
@@ -98,12 +102,30 @@ export default function ClientDetails() {
     await db.collection('cleanings').add(newCleaning);
   };
 
-  const handleAssignStaff = async (cleaningId: string, staffId: string) => {
-    const staff = staffList.find(s => s.uid === staffId);
-    if (!staff) return;
+  const handleAssignStaffToCleaning = async (cleaningId: string, staffId: string, isChecked: boolean) => {
+    const cleaning = clientCleanings.find(c => c.id === cleaningId);
+    if (!cleaning) return;
+    
+    const currentIds = cleaning.assignedStaffIds || [];
+    const currentNames = cleaning.assignedStaffNames || [];
+    
+    let nextIds: string[];
+    let nextNames: string[];
+    
+    if (isChecked) {
+      const staff = staffList.find(s => s.uid === staffId);
+      if (!staff) return;
+      nextIds = [...currentIds, staffId];
+      nextNames = [...currentNames, staff.name];
+    } else {
+      const index = currentIds.indexOf(staffId);
+      nextIds = currentIds.filter(id => id !== staffId);
+      nextNames = currentNames.filter((_, i) => i !== index);
+    }
+    
     await db.collection('cleanings').doc(cleaningId).update({ 
-      assignedStaffId: staffId,
-      assignedStaffName: staff.name
+      assignedStaffIds: nextIds,
+      assignedStaffNames: nextNames
     });
   };
 
@@ -141,11 +163,17 @@ export default function ClientDetails() {
     }
   };
 
-  const handleUpdateStaff = async (staffId: string) => {
-    if (!id) return;
-    const staff = staffList.find(s => s.uid === staffId);
+  const handleUpdateStaff = async (staffId: string, isChecked: boolean) => {
+    if (!id || !client) return;
+    const current = client.assignedStaffIds || [];
+    let next: string[];
+    if (isChecked) {
+      next = [...current, staffId];
+    } else {
+      next = current.filter(uid => uid !== staffId);
+    }
     await db.collection('clients').doc(id).update({
-      assignedStaffId: staffId
+      assignedStaffIds: next
     });
   };
 
@@ -318,16 +346,21 @@ export default function ClientDetails() {
                 <User size={18} />
                 {t('assignStaff')}
               </h3>
-              <select 
-                className="w-full p-3 rounded-xl border border-slate-200 focus:border-petrol outline-none transition-all text-sm"
-                value={client.assignedStaffId || ''}
-                onChange={(e) => handleUpdateStaff(e.target.value)}
-              >
-                <option value="">{t('selectStaff')}</option>
+              <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto p-3 border rounded-xl bg-slate-50">
                 {staffList.map(staff => (
-                  <option key={staff.uid} value={staff.uid}>{staff.name}</option>
+                  <label key={staff.uid} className="flex items-center justify-between p-2 hover:bg-white rounded-lg cursor-pointer transition-colors">
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 accent-petrol"
+                        checked={(client.assignedStaffIds || []).includes(staff.uid)}
+                        onChange={e => handleUpdateStaff(staff.uid, e.target.checked)}
+                      />
+                      <span className="text-sm text-slate-700">{staff.name}</span>
+                    </div>
+                  </label>
                 ))}
-              </select>
+              </div>
             </div>
           )}
 
@@ -380,25 +413,27 @@ export default function ClientDetails() {
                   {isAdmin && (
                     <div className="flex flex-col gap-1">
                       <label className="text-[10px] text-slate-400 uppercase font-bold">{t('staff')}</label>
-                      <div className="flex items-center gap-2">
-                        <select 
-                          className="bg-transparent text-xs font-bold text-petrol outline-none cursor-pointer flex-1"
-                          value={cleaning.assignedStaffId || ''}
-                          onChange={(e) => handleAssignStaff(cleaning.id!, e.target.value)}
-                        >
-                          <option value="">{t('selectStaff')}</option>
-                          {staffList.map(staff => (
-                            <option key={staff.uid} value={staff.uid}>{staff.name}</option>
-                          ))}
-                        </select>
-                        <button 
-                          onClick={() => handleUpdateNotes(cleaning.id!, cleaning.notes || '')}
-                          className="p-1 hover:bg-slate-200 rounded transition-colors text-slate-400 hover:text-petrol"
-                          title={t('notes')}
-                        >
-                          <FileText size={14} />
-                        </button>
+                      <div className="flex flex-wrap gap-2 p-2 border rounded-lg bg-white">
+                        {staffList.map(staff => (
+                          <label key={staff.uid} className="flex items-center gap-1 cursor-pointer">
+                            <input 
+                              type="checkbox"
+                              className="w-3 h-3 accent-petrol"
+                              checked={(cleaning.assignedStaffIds || []).includes(staff.uid)}
+                              onChange={(e) => handleAssignStaffToCleaning(cleaning.id!, staff.uid, e.target.checked)}
+                            />
+                            <span className="text-[10px] text-slate-600">{staff.name}</span>
+                          </label>
+                        ))}
                       </div>
+                      <button 
+                        onClick={() => handleUpdateNotes(cleaning.id!, cleaning.notes || '')}
+                        className="mt-1 p-1 hover:bg-slate-200 rounded transition-colors text-slate-400 hover:text-petrol flex items-center gap-1 text-[10px]"
+                        title={t('notes')}
+                      >
+                        <FileText size={12} />
+                        {t('notes')}
+                      </button>
                     </div>
                   )}
 
@@ -409,10 +444,12 @@ export default function ClientDetails() {
                     </div>
                   )}
 
-                  {!isAdmin && cleaning.assignedStaffId && (
+                  {!isAdmin && cleaning.assignedStaffIds && (
                     <div className="flex items-center gap-2">
                       <User size={12} className="text-petrol" />
-                      <span className="text-xs font-medium text-slate-600">{cleaning.assignedStaffName}</span>
+                      <span className="text-xs font-medium text-slate-600">
+                        {cleaning.assignedStaffNames?.join(', ') || '---'}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -472,7 +509,7 @@ export default function ClientDetails() {
                       </div>
                       <div>
                         <p className="text-[10px] text-slate-400 uppercase font-bold">{t('staff')}</p>
-                        <p className="text-sm font-bold text-petrol">{selectedCleaning.assignedStaffName || '---'}</p>
+                        <p className="text-sm font-bold text-petrol">{selectedCleaning.assignedStaffNames?.join(', ') || '---'}</p>
                       </div>
                       <div>
                         <p className="text-[10px] text-slate-400 uppercase font-bold">{t('teamPay')}</p>

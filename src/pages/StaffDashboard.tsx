@@ -15,7 +15,8 @@ import {
   X,
   Maximize2,
   MessageSquare,
-  Image as ImageIcon
+  Image as ImageIcon,
+  ExternalLink
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
@@ -35,7 +36,7 @@ export default function StaffDashboard() {
     
     const unsubscribe = db.collection('cleanings')
       .where('date', '==', today)
-      .where('assignedStaffId', '==', user.uid)
+      .where('assignedStaffIds', 'array-contains', user.uid)
       .onSnapshot((snapshot) => {
         setAssignedCleanings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Cleaning)));
         setLoading(false);
@@ -69,8 +70,21 @@ export default function StaffDashboard() {
   };
 
   const toggleStatus = async (cleaningId: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'scheduled' ? 'completed' : 'scheduled';
-    await db.collection('cleanings').doc(cleaningId).update({ status: newStatus });
+    const statuses: Cleaning['status'][] = ['scheduled', 'on_the_way', 'in_progress', 'completed'];
+    const currentIndex = statuses.indexOf(currentStatus as any);
+    const nextStatus = statuses[(currentIndex + 1) % statuses.length];
+    
+    const updateData: any = { status: nextStatus };
+    
+    if (nextStatus === 'in_progress' && !assignedCleanings.find(c => c.id === cleaningId)?.startTime) {
+      updateData.startTime = format(new Date(), 'HH:mm');
+    }
+    
+    await db.collection('cleanings').doc(cleaningId).update(updateData);
+  };
+
+  const handleUpdateArrival = async (cleaningId: string, time: string) => {
+    await db.collection('cleanings').doc(cleaningId).update({ estimatedArrival: time });
   };
 
   if (loading) return <div className="p-8 text-center">{t('processing')}</div>;
@@ -103,18 +117,54 @@ export default function StaffDashboard() {
                   </div>
                   <div>
                     <h3 className="font-bold text-xl text-slate-800">{cleaning.clientName}</h3>
-                    <div className="flex items-center gap-2 text-slate-500 text-sm">
-                      <MapPin size={14} />
-                      {cleaning.clientAddress}
+                    <div className="flex flex-wrap items-center gap-4 mt-1">
+                      <div className="flex items-center gap-2 text-slate-500 text-sm">
+                        <MapPin size={14} />
+                        {cleaning.clientAddress}
+                        <a 
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleaning.clientAddress)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-petrol hover:text-gold transition-colors"
+                          title="Open in Google Maps"
+                        >
+                          <ExternalLink size={14} />
+                        </a>
+                      </div>
+                      {cleaning.scheduledTime && (
+                        <div className="flex items-center gap-2 text-slate-500 text-sm bg-slate-100 px-2 py-1 rounded-lg">
+                          <Clock size={14} className="text-petrol" />
+                          <span className="font-bold">{t('scheduledTime')}: {cleaning.scheduledTime}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
-                <button 
-                  onClick={() => toggleStatus(cleaning.id!, cleaning.status)}
-                  className={`p-3 rounded-2xl transition-all ${cleaning.status === 'completed' ? 'text-emerald-500 bg-emerald-50 scale-110' : 'text-slate-300 bg-slate-50 hover:bg-slate-100'}`}
-                >
-                  <CheckCircle size={32} />
-                </button>
+                <div className="flex flex-col items-end gap-2">
+                  <button 
+                    onClick={() => toggleStatus(cleaning.id!, cleaning.status)}
+                    className={`p-3 rounded-2xl transition-all flex items-center gap-2 font-bold text-sm ${
+                      cleaning.status === 'completed' ? 'text-emerald-500 bg-emerald-50' : 
+                      cleaning.status === 'in_progress' ? 'text-blue-500 bg-blue-50' :
+                      cleaning.status === 'on_the_way' ? 'text-gold bg-gold/10' :
+                      'text-slate-300 bg-slate-50 hover:bg-slate-100'
+                    }`}
+                  >
+                    <CheckCircle size={24} />
+                    {t(cleaning.status)}
+                  </button>
+                  {cleaning.status === 'on_the_way' && (
+                    <div className="flex items-center gap-2">
+                      <Clock size={14} className="text-gold" />
+                      <input 
+                        type="time" 
+                        className="text-xs border rounded p-1 outline-none focus:border-gold"
+                        value={cleaning.estimatedArrival || ''}
+                        onChange={(e) => handleUpdateArrival(cleaning.id!, e.target.value)}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6 py-6 border-y border-slate-50">
@@ -137,18 +187,34 @@ export default function StaffDashboard() {
                 </div>
               </div>
 
-              {/* Admin Notes */}
-              {cleaning.notes && (
-                <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100 flex gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
-                    <Info size={20} />
+              {/* Observations / Notes */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Admin Notes */}
+                {cleaning.notes && (
+                  <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100 flex gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                      <Info size={20} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">{t('notes')} (Admin)</p>
+                      <p className="text-sm text-blue-900 leading-relaxed font-medium">{cleaning.notes}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">{t('notes')}</p>
-                    <p className="text-sm text-blue-900 leading-relaxed font-medium">{cleaning.notes}</p>
+                )}
+
+                {/* Client Feedback/Observations */}
+                {cleaning.clientFeedback && (
+                  <div className="bg-amber-50/50 p-5 rounded-2xl border border-amber-100 flex gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                      <MessageSquare size={20} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">{t('clientFeedback')}</p>
+                      <p className="text-sm text-amber-900 leading-relaxed font-medium">{cleaning.clientFeedback}</p>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
               {/* Staff Notes Input */}
               <div className="space-y-2">

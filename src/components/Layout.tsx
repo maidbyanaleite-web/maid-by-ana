@@ -20,11 +20,11 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   const navItems = [
     { to: '/', icon: LayoutDashboard, label: t('dashboard') },
-    { to: '/clients', icon: Users, label: t('clients') },
-    { to: '/budget', icon: Calculator, label: t('budget') },
   ];
 
   if (isAdmin) {
+    navItems.push({ to: '/clients', icon: Users, label: t('clients') });
+    navItems.push({ to: '/budget', icon: Calculator, label: t('budget') });
     navItems.push({ to: '/staff', icon: Users, label: t('manageStaff') });
   }
 

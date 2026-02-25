@@ -3,15 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Maid By Ana - Management</title>
+    <title>Maid By Ana</title>
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
-
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
+    
     <script>
-      // Firebase configuration
+      // Firebase configuration - Replace with your actual config
       const firebaseConfig = {
         apiKey: "AIzaSyBgO3BpNX0Kuy5SAZlehoDVLMlEw08v3Yg",
         authDomain: "maid-by-ana-production.firebaseapp.com",
@@ -23,8 +24,17 @@
       };
       
       // Initialize Firebase
-      if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
+      firebase.initializeApp(firebaseConfig);
+      
+      // Global access for the app
+      window.db = firebase.firestore();
+      window.auth = firebase.auth();
+      window.storage = firebase.storage();
+      
+      try {
+        window.messaging = firebase.messaging();
+      } catch (e) {
+        console.log("Messaging not supported in this browser");
       }
     </script>
   </head>
