@@ -21,6 +21,7 @@ export default function Receipts() {
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [receiptType, setReceiptType] = useState<ReceiptType>('single');
+  const [receiptPaymentMethod, setReceiptPaymentMethod] = useState<PaymentMethod>('cash');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -98,6 +99,21 @@ export default function Receipts() {
                 {clients.map(client => (
                   <option key={client.id} value={client.id}>{client.name}</option>
                 ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{t('paymentMethod')}</label>
+              <select 
+                className="input"
+                value={receiptPaymentMethod}
+                onChange={(e) => setReceiptPaymentMethod(e.target.value as PaymentMethod)}
+              >
+                <option value="cash">Cash</option>
+                <option value="zelle">Zelle</option>
+                <option value="venmo">Venmo</option>
+                <option value="check">Check</option>
+                <option value="apple_pay">ApplePay</option>
               </select>
             </div>
 
