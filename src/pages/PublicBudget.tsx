@@ -149,14 +149,20 @@ export default function PublicBudget() {
     <div className="min-h-screen bg-slate-50 pb-12">
       <nav className="bg-petrol text-white p-4 sticky top-0 z-50 shadow-lg">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
-          {brandSettings?.logoUrl ? (
-            <img src={brandSettings.logoUrl} alt={brandSettings.appName} className="h-8" />
-          ) : (
-            <h1 className="text-xl font-bold text-gold">{brandSettings?.appName || 'Maid By Ana'}</h1>
-          )}
-          <div className="flex gap-2">
-            <button onClick={() => setLanguage('en')} className={`px-3 py-1 text-xs font-bold rounded-full ${language === 'en' ? 'bg-gold text-petrol' : 'bg-white/10'}`}>EN</button>
-            <button onClick={() => setLanguage('pt')} className={`px-3 py-1 text-xs font-bold rounded-full ${language === 'pt' ? 'bg-gold text-petrol' : 'bg-white/10'}`}>PT</button>
+          <button onClick={() => navigate('/login')} className="flex items-center gap-2 hover:text-gold transition-colors">
+            <ArrowLeft size={20} />
+            <span className="font-bold">{t('backToLogin')}</span>
+          </button>
+          <div className="flex items-center gap-4">
+            {brandSettings?.logoUrl ? (
+              <img src={brandSettings.logoUrl} alt={brandSettings.appName} className="h-8" />
+            ) : (
+              <h1 className="text-xl font-bold text-gold">{brandSettings?.appName || 'Maid By Ana'}</h1>
+            )}
+            <div className="flex gap-2">
+              <button onClick={() => setLanguage('en')} className={`px-3 py-1 text-xs font-bold rounded-full ${language === 'en' ? 'bg-gold text-petrol' : 'bg-white/10'}`}>EN</button>
+              <button onClick={() => setLanguage('pt')} className={`px-3 py-1 text-xs font-bold rounded-full ${language === 'pt' ? 'bg-gold text-petrol' : 'bg-white/10'}`}>PT</button>
+            </div>
           </div>
         </div>
       </nav>
