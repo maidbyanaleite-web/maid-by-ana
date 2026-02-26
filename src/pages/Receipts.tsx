@@ -1,26 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../services/firebase';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Client } from '../types';
+import { Client, PaymentMethod } from '../types';
 import { 
   FileText, 
   Download, 
-  Search,
   Filter,
-  CheckCircle2,
-  XCircle
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { generateReceipt, generateBatchReceipt } from '../utils/pdfGenerator';
+import { generateBatchReceipt } from '../utils/pdfGenerator';
 import { format } from 'date-fns';
-
-type ReceiptType = 'single' | 'biweekly' | 'monthly';
 
 export default function Receipts() {
   const { t } = useLanguage();
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClientId, setSelectedClientId] = useState<string>('');
-  const [receiptType, setReceiptType] = useState<ReceiptType>('single');
+  const [numberOfCleanings, setNumberOfCleanings] = useState<number>(1);
   const [receiptPaymentMethod, setReceiptPaymentMethod] = useState<PaymentMethod>('cash');
   const [loading, setLoading] = useState(true);
 
@@ -37,18 +32,10 @@ export default function Receipts() {
   const handleDownload = () => {
     if (!selectedClient) return;
 
-    if (receiptType === 'single') {
-      generateReceipt(selectedClient, format(new Date(), 'yyyy-MM-dd'), selectedClient.serviceValue);
-    } else {
-      // For batch receipts, we'd ideally fetch actual cleaning dates, 
-      // but for now we'll simulate based on frequency or last cleanings
-      const period = receiptType === 'biweekly' ? 'Bi-weekly' : 'Monthly';
-      const count = receiptType === 'biweekly' ? 2 : 4;
-      const dates = Array.from({ length: count }).map((_, i) => 
-        format(new Date(Date.now() - i * 7 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd')
-      );
-      generateBatchReceipt(selectedClient, dates, selectedClient.serviceValue * count, period);
-    }
+    const dates = Array.from({ length: numberOfCleanings }).map((_, i) => 
+      format(new Date(Date.now() - i * 7 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd')
+    );
+    generateBatchReceipt(selectedClient, dates, selectedClient.serviceValue * numberOfCleanings, `${numberOfCleanings} Cleanings`, receiptPaymentMethod);
   };
 
   if (loading) return <div className="p-8 text-center">{t('processing')}</div>;
@@ -70,22 +57,14 @@ export default function Receipts() {
 
           <div className="space-y-4">
             <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{t('type')}</label>
-              <div className="flex flex-col gap-2">
-                {(['single', 'biweekly', 'monthly'] as ReceiptType[]).map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => setReceiptType(type)}
-                    className={`px-4 py-3 rounded-xl text-sm font-medium transition-all text-left border ${
-                      receiptType === type 
-                        ? 'bg-petrol/5 border-petrol text-petrol shadow-sm' 
-                        : 'border-slate-100 text-slate-500 hover:bg-slate-50'
-                    }`}
-                  >
-                    {t(type + 'Receipt' as any)}
-                  </button>
-                ))}
-              </div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{t('numberOfCleanings')}</label>
+              <input 
+                type="number"
+                min="1"
+                className="input"
+                value={numberOfCleanings}
+                onChange={(e) => setNumberOfCleanings(Number(e.target.value))}
+              />
             </div>
 
             <div>
@@ -175,16 +154,12 @@ export default function Receipts() {
                   <h3 className="text-[10px] font-black text-petrol uppercase tracking-widest mb-4">{t('summary')}</h3>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-400">type:</span>
-                      <span className="font-bold text-petrol capitalize">{receiptType}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-400">Agenda:</span>
-                      <span className="font-bold text-petrol">{receiptType === 'single' ? 1 : receiptType === 'biweekly' ? 2 : 4}</span>
+                      <span className="text-slate-400">{t('numberOfCleanings')}:</span>
+                      <span className="font-bold text-petrol capitalize">{numberOfCleanings}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-400">{t('paymentMethod')}:</span>
-                      <span className="font-bold text-petrol capitalize">{selectedClient.paymentMethod}</span>
+                      <span className="font-bold text-petrol capitalize">{receiptPaymentMethod}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-400">{t('status')}:</span>
@@ -210,11 +185,7 @@ export default function Receipts() {
                   <div className="p-8 bg-slate-50 rounded-b-xl rounded-l-xl border border-slate-100">
                     <p className="text-5xl font-black text-petrol">
                       <span className="text-gold text-2xl mr-1">$</span>
-                      {receiptType === 'single' 
-                        ? selectedClient.serviceValue 
-                        : receiptType === 'biweekly' 
-                          ? selectedClient.serviceValue * 2 
-                          : selectedClient.serviceValue * 4}
+                      {selectedClient.serviceValue * numberOfCleanings}
                     </p>
                   </div>
                 </div>
