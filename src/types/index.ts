@@ -11,7 +11,7 @@ export interface UserProfile {
 export type ClientType = 'regular' | 'airbnb' | 'esporadico';
 export type Frequency = 'mensal' | 'quinzenal' | 'semanal';
 export type ServiceType = 'regular' | 'deep' | 'move_in' | 'move_out';
-export type PaymentMethod = 'cash' | 'zelle' | 'venmo' | 'check';
+export type PaymentMethod = 'cash' | 'zelle' | 'venmo' | 'check' | 'apple_pay';
 
 export interface Client {
   id?: string;

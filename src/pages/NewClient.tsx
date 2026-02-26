@@ -137,6 +137,7 @@ export default function NewClient() {
                 <option value="zelle">Zelle</option>
                 <option value="venmo">Venmo</option>
                 <option value="check">Check</option>
+                <option value="apple_pay">ApplePay</option>
               </select>
             </div>
             {formData.type !== 'airbnb' && (

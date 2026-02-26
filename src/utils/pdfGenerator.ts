@@ -35,6 +35,7 @@ export const generateReceipt = (client: Client, date: string, amount: number) =>
       ['Service Type', client.serviceType.toUpperCase()],
       ['Address', client.address],
       ['Payment Method', client.paymentMethod.toUpperCase()],
+      ['Status', 'Paid'],
       ['Total Amount', `$${amount.toFixed(2)}`],
     ],
     theme: 'striped',
@@ -70,9 +71,11 @@ export const generateBatchReceipt = (client: Client, dates: string[], totalAmoun
   doc.setFontSize(10);
   doc.text(`Client: ${client.name}`, 20, 65);
   doc.text(`Address: ${client.address}`, 20, 70);
+  doc.text(`Payment Method: ${client.paymentMethod.toUpperCase()}`, 20, 75);
+  doc.text(`Status: Paid`, 20, 80);
 
   autoTable(doc, {
-    startY: 80,
+    startY: 90,
     head: [['Service Date', 'Service Type', 'Amount']],
     body: dates.map(date => [
       date,
