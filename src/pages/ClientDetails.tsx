@@ -318,9 +318,10 @@ export default function ClientDetails() {
           </div>
         </div>
 
-        {/* Right Column: Financials & Actions */}
+        {/* Coluna da direita: Finanças e Ações */}
         <div className="space-y-8">
-          <div className="card bg-petrol text-white">
+          {/* Card com fundo escuro - Ajustado para visibilidade total */}
+          <div className="card bg-petrol text-white shadow-xl">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-bold flex items-center gap-2">
                 <DollarSign size={20} className="text-gold" />
@@ -329,31 +330,40 @@ export default function ClientDetails() {
               {isAdmin && (
                 <button 
                   onClick={handleUpdateBudget}
-                  className="p-2 hover:bg-white/10 rounded-lg transition-colors text-gold"
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors text-gold"
                 >
                   <RefreshCw size={16} />
                 </button>
               )}
             </div>
+            
             <div className="space-y-4">
               {isAdmin && (
-                <div className="flex justify-between items-center border-b border-white/10 pb-2">
-                  <span className="text-white/70">{t('serviceValue')}</span>
-                  <span className="text-xl font-bold">${client.serviceValue}</span>
+                <div className="flex justify-between items-center border-b border-white/20 pb-2">
+                  <span className="text-white font-medium">{t('serviceValue')}</span>
+                  {/* Usei text-white puro para não sumir */}
+                  <span className="text-xl font-black text-white">${client.serviceValue}</span>
                 </div>
               )}
-              <div className="flex justify-between items-center border-b border-white/10 pb-2">
-                <span className="text-white/70">{t('teamPay')}</span>
-                <span className="text-xl font-bold text-gold">${client.teamPaymentValue}</span>
+              
+              <div className="flex justify-between items-center border-b border-white/20 pb-2">
+                <span className="text-white font-medium">{t('teamPay')}</span>
+                {/* Gold geralmente tem bom contraste no azul escuro */}
+                <span className="text-xl font-black text-gold">${client.teamPaymentValue}</span>
               </div>
-              <div className="flex justify-between items-center border-b border-white/10 pb-2">
-                                  <span className="text-white/70">{t('numberOfStaff')}</span>
-                <span className="text-xl font-bold">{client.numberOfStaff || 1}</span>
+              
+              <div className="flex justify-between items-center border-b border-white/20 pb-2">
+                <span className="text-white font-medium">{t('numberOfStaff')}</span>
+                <span className="text-xl font-black text-white">{client.numberOfStaff || 1}</span>
               </div>
+              
               {isAdmin && (
-                <div className="flex justify-between items-center pt-2">
-                  <span className="text-white/70">{t('netProfit')}</span>
-                  <span className="text-xl font-bold text-emerald-400">${client.serviceValue - client.teamPaymentValue}</span>
+                <div className="flex justify-between items-center pt-2 bg-white/10 p-2 rounded-lg">
+                  <span className="text-white font-bold">{t('netProfit')}</span>
+                  {/* Emerald-400 as vezes some, usei um verde mais brilhante ou branco */}
+                  <span className="text-2xl font-black text-green-400">
+                    ${(client.serviceValue - client.teamPaymentValue).toFixed(2)}
+                  </span>
                 </div>
               )}
             </div>
