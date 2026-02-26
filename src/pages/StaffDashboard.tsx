@@ -171,62 +171,224 @@ export default function StaffDashboard() {
                     animate={{ opacity: 1, y: 0 }}
                     className="card space-y-6 overflow-hidden border-l-4 border-l-petrol"
                   >
-                    <div className="flex justify-between items-start">
-                      <div className="flex gap-4 items-center">
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${cleaning.clientType === 'airbnb' ? 'bg-gold/10 text-gold' : 'bg-petrol/10 text-petrol'}`}>
-                          <ImageIcon size={24} />
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-xl text-slate-800">{cleaning.clientName}</h3>
-                          <div className="flex flex-wrap items-center gap-4 mt-1">
-                            <div className="flex items-center gap-2 text-slate-500 text-sm">
-                              <MapPin size={14} />
-                              {cleaning.clientAddress}
-                              <a 
-                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleaning.clientAddress)}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-petrol hover:text-gold transition-colors"
-                                title="Open in Google Maps"
-                              >
-                                <ExternalLink size={14} />
-                              </a>
-                            </div>
-                            {cleaning.scheduledTime && (
-                              <div className="flex items-center gap-2 text-slate-500 text-sm bg-slate-100 px-2 py-1 rounded-lg">
-                                <Clock size={14} className="text-petrol" />
-                                <span className="font-bold">{t('scheduledTime')}: {cleaning.scheduledTime}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <button 
-                          onClick={() => toggleStatus(cleaning.id!, cleaning.status)}
-                          className={`p-3 rounded-2xl transition-all flex items-center gap-2 font-bold text-sm ${' '}
-                            ${cleaning.status === 'completed' ? 'text-emerald-500 bg-emerald-50' : 
-                            cleaning.status === 'in_progress' ? 'text-blue-500 bg-blue-50' :
-                            cleaning.status === 'on_the_way' ? 'text-gold bg-gold/10' :
-                            'text-slate-300 bg-slate-50 hover:bg-slate-100'}
-                          `}
+              <div className="flex justify-between items-start">
+                <div className="flex gap-4 items-center">
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${cleaning.clientType === 'airbnb' ? 'bg-gold/10 text-gold' : 'bg-petrol/10 text-petrol'}`}>
+                    <ImageIcon size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-xl text-slate-800">{cleaning.clientName}</h3>
+                    <div className="flex flex-wrap items-center gap-4 mt-1">
+                      <div className="flex items-center gap-2 text-slate-500 text-sm">
+                        <MapPin size={14} />
+                        {cleaning.clientAddress}
+                        <a 
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleaning.clientAddress)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-petrol hover:text-gold transition-colors"
+                          title="Open in Google Maps"
                         >
-                          <CheckCircle size={24} />
-                          {t(cleaning.status)}
-                        </button>
-                        {cleaning.status === 'on_the_way' && (
-                          <div className="flex items-center gap-2">
-                            <Clock size={14} className="text-gold" />
-                            <input 
-                              type="time" 
-                              className="text-xs border rounded p-1 outline-none focus:border-gold"
-                              value={cleaning.estimatedArrival || ''}
-                              onChange={(e) => handleUpdateArrival(cleaning.id!, e.target.value)}
-                            />
-                          </div>
-                        )}
+                          <ExternalLink size={14} />
+                        </a>
                       </div>
+                      {cleaning.scheduledTime && (
+                        <div className="flex items-center gap-2 text-slate-500 text-sm bg-slate-100 px-2 py-1 rounded-lg">
+                          <Clock size={14} className="text-petrol" />
+                          <span className="font-bold">{t('scheduledTime')}: {cleaning.scheduledTime}</span>
+                        </div>
+                      )}
                     </div>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <button 
+                    onClick={() => toggleStatus(cleaning.id!, cleaning.status)}
+                    className={`p-3 rounded-2xl transition-all flex items-center gap-2 font-bold text-sm ${
+                      cleaning.status === 'completed' ? 'text-emerald-500 bg-emerald-50' : 
+                      cleaning.status === 'in_progress' ? 'text-blue-500 bg-blue-50' :
+                      cleaning.status === 'on_the_way' ? 'text-gold bg-gold/10' :
+                      'text-slate-300 bg-slate-50 hover:bg-slate-100'
+                    }`}
+                  >
+                    <CheckCircle size={24} />
+                    {t(cleaning.status)}
+                  </button>
+                  {cleaning.status === 'on_the_way' && (
+                    <div className="flex items-center gap-2">
+                      <Clock size={14} className="text-gold" />
+                      <input 
+                        type="time" 
+                        className="text-xs border rounded p-1 outline-none focus:border-gold"
+                        value={cleaning.estimatedArrival || ''}
+                        onChange={(e) => handleUpdateArrival(cleaning.id!, e.target.value)}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 py-6 border-y border-slate-50">
+                <div className="space-y-1">
+                  <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{t('teamPay')}</p>
+                  <p className="text-xl font-bold text-petrol">${cleaning.teamPaymentValue}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{t('status')}</p>
+                  <p className={`text-sm font-bold flex items-center gap-1 ${cleaning.status === 'completed' ? 'text-emerald-500' : 'text-gold'}`}>
+                    <span className={`w-2 h-2 rounded-full ${cleaning.status === 'completed' ? 'bg-emerald-500' : 'bg-gold animate-pulse'}`} />
+                    {t(cleaning.status)}
+                  </p>
+                </div>
+                <div className="col-span-2 space-y-1">
+                  <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{t('clientType')}</p>
+                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase ${cleaning.clientType === 'airbnb' ? 'bg-gold/10 text-gold' : 'bg-petrol/10 text-petrol'}`}>
+                    {t(cleaning.clientType)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Observations / Notes */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Admin Notes */}
+                {cleaning.notes && (
+                  <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100 flex gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                      <Info size={20} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">{t('notes')} (Admin)</p>
+                      <p className="text-sm text-blue-900 leading-relaxed font-medium">{cleaning.notes}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Client Feedback/Observations */}
+                {cleaning.clientFeedback && (
+                  <div className="bg-amber-50/50 p-5 rounded-2xl border border-amber-100 flex gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                      <MessageSquare size={20} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">{t('clientFeedback')}</p>
+                      <p className="text-sm text-amber-900 leading-relaxed font-medium">{cleaning.clientFeedback}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Staff Notes Input */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                  <MessageSquare size={14} />
+                  {t('staffNotes')}
+                </label>
+                <textarea 
+                  className="input min-h-[100px] resize-none text-sm"
+                  placeholder={t('notes') + '...'}
+                  value={cleaning.staffNotes || ''}
+                  onChange={(e) => handleUpdateStaffNotes(cleaning.id!, e.target.value)}
+                />
+              </div>
+
+              {/* Photo Sections */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {/* Photos Before */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                      <Camera size={16} className="text-petrol" />
+                      {t('photosBefore')}
+                    </h4>
+                    <label className="w-8 h-8 rounded-full bg-petrol/5 flex items-center justify-center text-petrol hover:bg-petrol/10 cursor-pointer transition-colors">
+                      <Plus size={18} />
+                      <input type="file" className="hidden" onChange={(e) => handleUploadPhoto(cleaning.id!, 'before', e)} />
+                    </label>
+                  </div>
+                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                    {cleaning.photosBefore?.map((url, i) => (
+                      <div key={i} className="relative group shrink-0">
+                        <img src={url} alt="Before" className="w-24 h-24 object-cover rounded-2xl border border-slate-100 shadow-sm" />
+                        <button 
+                          onClick={() => setSelectedPhoto(url)}
+                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center text-white"
+                        >
+                          <Maximize2 size={20} />
+                        </button>
+                      </div>
+                    ))}
+                    {(!cleaning.photosBefore || cleaning.photosBefore.length === 0) && (
+                      <div className="w-24 h-24 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-300">
+                        <Camera size={24} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Photos After */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                      <Camera size={16} className="text-emerald-500" />
+                      {t('photosAfter')}
+                    </h4>
+                    <label className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 hover:bg-emerald-100 cursor-pointer transition-colors">
+                      <Plus size={18} />
+                      <input type="file" className="hidden" onChange={(e) => handleUploadPhoto(cleaning.id!, 'after', e)} />
+                    </label>
+                  </div>
+                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                    {cleaning.photosAfter?.map((url, i) => (
+                      <div key={i} className="relative group shrink-0">
+                        <img src={url} alt="After" className="w-24 h-24 object-cover rounded-2xl border border-slate-100 shadow-sm" />
+                        <button 
+                          onClick={() => setSelectedPhoto(url)}
+                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center text-white"
+                        >
+                          <Maximize2 size={20} />
+                        </button>
+                      </div>
+                    ))}
+                    {(!cleaning.photosAfter || cleaning.photosAfter.length === 0) && (
+                      <div className="w-24 h-24 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-300">
+                        <Camera size={24} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Extra Photos */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                      <ImageIcon size={16} className="text-gold" />
+                      {t('extraPhotos')}
+                    </h4>
+                    <label className="w-8 h-8 rounded-full bg-gold/5 flex items-center justify-center text-gold hover:bg-gold/10 cursor-pointer transition-colors">
+                      <Plus size={18} />
+                      <input type="file" className="hidden" onChange={(e) => handleUploadPhoto(cleaning.id!, 'extra', e)} />
+                    </label>
+                  </div>
+                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                    {cleaning.extraPhotos?.map((url, i) => (
+                      <div key={i} className="relative group shrink-0">
+                        <img src={url} alt="Extra" className="w-24 h-24 object-cover rounded-2xl border border-slate-100 shadow-sm" />
+                        <button 
+                          onClick={() => setSelectedPhoto(url)}
+                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center text-white"
+                        >
+                          <Maximize2 size={20} />
+                        </button>
+                      </div>
+                    ))}
+                    {(!cleaning.extraPhotos || cleaning.extraPhotos.length === 0) && (
+                      <div className="w-24 h-24 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-300">
+                        <ImageIcon size={24} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
                   </motion.div>
                 )) : (
                   <div className="card text-center py-20 text-slate-400">
