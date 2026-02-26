@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Cleaning } from '../types';
 import { 
-  Calendar, 
+  Calendar as CalendarIcon, 
   MapPin,
   Clock,
   ChevronRight,
@@ -16,25 +16,43 @@ import {
   Maximize2,
   MessageSquare,
   Image as ImageIcon,
-  ExternalLink
+  ExternalLink,
+  List
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, parse, startOfWeek, getDay, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
+import { enUS, ptBR } from 'date-fns/locale';
+
+const locales = {
+  'en': enUS,
+  'pt': ptBR,
+};
+
+const localizer = dateFnsLocalizer({
+  format,
+  parse,
+  startOfWeek,
+  getDay,
+  locales,
+});
 
 export default function StaffDashboard() {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [assignedCleanings, setAssignedCleanings] = useState<Cleaning[]>([]);
+  const [allCleanings, setAllCleanings] = useState<Cleaning[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [view, setView] = useState<'list' | 'calendar'>('list');
 
   useEffect(() => {
     if (!user) return;
 
     const today = format(new Date(), 'yyyy-MM-dd');
     
-    const unsubscribe = db.collection('cleanings')
+    const unsubscribeToday = db.collection('cleanings')
       .where('date', '==', today)
       .where('assignedStaffIds', 'array-contains', user.uid)
       .onSnapshot((snapshot) => {
@@ -42,7 +60,16 @@ export default function StaffDashboard() {
         setLoading(false);
       });
 
-    return () => unsubscribe();
+    const unsubscribeAll = db.collection('cleanings')
+      .where('assignedStaffIds', 'array-contains', user.uid)
+      .onSnapshot((snapshot) => {
+        setAllCleanings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Cleaning)));
+      });
+
+    return () => {
+      unsubscribeToday();
+      unsubscribeAll();
+    };
   }, [user]);
 
   const handleUploadPhoto = async (cleaningId: string, type: 'before' | 'after' | 'extra', e: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,258 +114,144 @@ export default function StaffDashboard() {
     await db.collection('cleanings').doc(cleaningId).update({ estimatedArrival: time });
   };
 
+  const calendarEvents = allCleanings.map(c => ({
+    title: c.clientName,
+    start: new Date(c.date + 'T' + (c.scheduledTime || '09:00')),
+    end: new Date(c.date + 'T' + (c.scheduledTime ? format(new Date(new Date().setHours(parseInt(c.scheduledTime.split(':')[0]) + 2, 0)), 'HH:mm') : '11:00')),
+    allDay: false,
+    resource: c
+  }));
+
   if (loading) return <div className="p-8 text-center">{t('processing')}</div>;
 
   return (
     <div className="space-y-8 pb-20">
-      <header>
-        <h1 className="text-3xl font-bold text-petrol">{t('welcome')}, {user?.name}</h1>
-        <p className="text-slate-500">{t('staffDashboard')}</p>
+      <header className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-petrol">{t('welcome')}, {user?.name}</h1>
+          <p className="text-slate-500">{t('staffDashboard')}</p>
+        </div>
+        <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
+          <button 
+            onClick={() => setView('list')}
+            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${view === 'list' ? 'bg-white text-petrol shadow-sm' : 'text-slate-500'}`}
+          >
+            <List size={16} />
+            {t('todaysServices')}
+          </button>
+          <button 
+            onClick={() => setView('calendar')}
+            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${view === 'calendar' ? 'bg-white text-petrol shadow-sm' : 'text-slate-500'}`}
+          >
+            <CalendarIcon size={16} />
+            {t('calendar')}
+          </button>
+        </div>
       </header>
 
-      <section className="space-y-6">
-        <h2 className="text-xl font-bold text-petrol flex items-center gap-2">
-          <Calendar size={20} />
-          {t('myCleanings')} - {format(new Date(), 'dd/MM/yyyy')}
-        </h2>
-
-        <div className="grid grid-cols-1 gap-8">
-          {assignedCleanings.length > 0 ? assignedCleanings.map(cleaning => (
-            <motion.div 
-              key={cleaning.id} 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="card space-y-6 overflow-hidden border-l-4 border-l-petrol"
-            >
-              <div className="flex justify-between items-start">
-                <div className="flex gap-4 items-center">
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${cleaning.clientType === 'airbnb' ? 'bg-gold/10 text-gold' : 'bg-petrol/10 text-petrol'}`}>
-                    <ImageIcon size={24} />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-xl text-slate-800">{cleaning.clientName}</h3>
-                    <div className="flex flex-wrap items-center gap-4 mt-1">
-                      <div className="flex items-center gap-2 text-slate-500 text-sm">
-                        <MapPin size={14} />
-                        {cleaning.clientAddress}
-                        <a 
-                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleaning.clientAddress)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-petrol hover:text-gold transition-colors"
-                          title="Open in Google Maps"
-                        >
-                          <ExternalLink size={14} />
-                        </a>
-                      </div>
-                      {cleaning.scheduledTime && (
-                        <div className="flex items-center gap-2 text-slate-500 text-sm bg-slate-100 px-2 py-1 rounded-lg">
-                          <Clock size={14} className="text-petrol" />
-                          <span className="font-bold">{t('scheduledTime')}: {cleaning.scheduledTime}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <button 
-                    onClick={() => toggleStatus(cleaning.id!, cleaning.status)}
-                    className={`p-3 rounded-2xl transition-all flex items-center gap-2 font-bold text-sm ${
-                      cleaning.status === 'completed' ? 'text-emerald-500 bg-emerald-50' : 
-                      cleaning.status === 'in_progress' ? 'text-blue-500 bg-blue-50' :
-                      cleaning.status === 'on_the_way' ? 'text-gold bg-gold/10' :
-                      'text-slate-300 bg-slate-50 hover:bg-slate-100'
-                    }`}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={view}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2 }}
+        >
+          {view === 'list' ? (
+            <section className="space-y-6">
+              <h2 className="text-xl font-bold text-petrol flex items-center gap-2">
+                <List size={20} />
+                {t('myCleanings')} - {format(new Date(), 'dd/MM/yyyy')}
+              </h2>
+              <div className="grid grid-cols-1 gap-8">
+                {assignedCleanings.length > 0 ? assignedCleanings.map(cleaning => (
+                  <motion.div 
+                    key={cleaning.id} 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="card space-y-6 overflow-hidden border-l-4 border-l-petrol"
                   >
-                    <CheckCircle size={24} />
-                    {t(cleaning.status)}
-                  </button>
-                  {cleaning.status === 'on_the_way' && (
-                    <div className="flex items-center gap-2">
-                      <Clock size={14} className="text-gold" />
-                      <input 
-                        type="time" 
-                        className="text-xs border rounded p-1 outline-none focus:border-gold"
-                        value={cleaning.estimatedArrival || ''}
-                        onChange={(e) => handleUpdateArrival(cleaning.id!, e.target.value)}
-                      />
+                    <div className="flex justify-between items-start">
+                      <div className="flex gap-4 items-center">
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${cleaning.clientType === 'airbnb' ? 'bg-gold/10 text-gold' : 'bg-petrol/10 text-petrol'}`}>
+                          <ImageIcon size={24} />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-xl text-slate-800">{cleaning.clientName}</h3>
+                          <div className="flex flex-wrap items-center gap-4 mt-1">
+                            <div className="flex items-center gap-2 text-slate-500 text-sm">
+                              <MapPin size={14} />
+                              {cleaning.clientAddress}
+                              <a 
+                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleaning.clientAddress)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-petrol hover:text-gold transition-colors"
+                                title="Open in Google Maps"
+                              >
+                                <ExternalLink size={14} />
+                              </a>
+                            </div>
+                            {cleaning.scheduledTime && (
+                              <div className="flex items-center gap-2 text-slate-500 text-sm bg-slate-100 px-2 py-1 rounded-lg">
+                                <Clock size={14} className="text-petrol" />
+                                <span className="font-bold">{t('scheduledTime')}: {cleaning.scheduledTime}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <button 
+                          onClick={() => toggleStatus(cleaning.id!, cleaning.status)}
+                          className={`p-3 rounded-2xl transition-all flex items-center gap-2 font-bold text-sm ${' '}
+                            ${cleaning.status === 'completed' ? 'text-emerald-500 bg-emerald-50' : 
+                            cleaning.status === 'in_progress' ? 'text-blue-500 bg-blue-50' :
+                            cleaning.status === 'on_the_way' ? 'text-gold bg-gold/10' :
+                            'text-slate-300 bg-slate-50 hover:bg-slate-100'}
+                          `}
+                        >
+                          <CheckCircle size={24} />
+                          {t(cleaning.status)}
+                        </button>
+                        {cleaning.status === 'on_the_way' && (
+                          <div className="flex items-center gap-2">
+                            <Clock size={14} className="text-gold" />
+                            <input 
+                              type="time" 
+                              className="text-xs border rounded p-1 outline-none focus:border-gold"
+                              value={cleaning.estimatedArrival || ''}
+                              onChange={(e) => handleUpdateArrival(cleaning.id!, e.target.value)}
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 py-6 border-y border-slate-50">
-                <div className="space-y-1">
-                  <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{t('teamPay')}</p>
-                  <p className="text-xl font-bold text-petrol">${cleaning.teamPaymentValue}</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{t('status')}</p>
-                  <p className={`text-sm font-bold flex items-center gap-1 ${cleaning.status === 'completed' ? 'text-emerald-500' : 'text-gold'}`}>
-                    <span className={`w-2 h-2 rounded-full ${cleaning.status === 'completed' ? 'bg-emerald-500' : 'bg-gold animate-pulse'}`} />
-                    {t(cleaning.status)}
-                  </p>
-                </div>
-                <div className="col-span-2 space-y-1">
-                  <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{t('clientType')}</p>
-                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase ${cleaning.clientType === 'airbnb' ? 'bg-gold/10 text-gold' : 'bg-petrol/10 text-petrol'}`}>
-                    {t(cleaning.clientType)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Observations / Notes */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Admin Notes */}
-                {cleaning.notes && (
-                  <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100 flex gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
-                      <Info size={20} />
+                  </motion.div>
+                )) : (
+                  <div className="card text-center py-20 text-slate-400">
+                    <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <CalendarIcon size={40} className="text-slate-200" />
                     </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">{t('notes')} (Admin)</p>
-                      <p className="text-sm text-blue-900 leading-relaxed font-medium">{cleaning.notes}</p>
-                    </div>
+                    <p className="text-lg font-medium">{t('noAssignedCleanings')}</p>
                   </div>
                 )}
-
-                {/* Client Feedback/Observations */}
-                {cleaning.clientFeedback && (
-                  <div className="bg-amber-50/50 p-5 rounded-2xl border border-amber-100 flex gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
-                      <MessageSquare size={20} />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">{t('clientFeedback')}</p>
-                      <p className="text-sm text-amber-900 leading-relaxed font-medium">{cleaning.clientFeedback}</p>
-                    </div>
-                  </div>
-                )}
               </div>
-
-              {/* Staff Notes Input */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                  <MessageSquare size={14} />
-                  {t('staffNotes')}
-                </label>
-                <textarea 
-                  className="input min-h-[100px] resize-none text-sm"
-                  placeholder={t('notes') + '...'}
-                  value={cleaning.staffNotes || ''}
-                  onChange={(e) => handleUpdateStaffNotes(cleaning.id!, e.target.value)}
-                />
-              </div>
-
-              {/* Photo Sections */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {/* Photos Before */}
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                      <Camera size={16} className="text-petrol" />
-                      {t('photosBefore')}
-                    </h4>
-                    <label className="w-8 h-8 rounded-full bg-petrol/5 flex items-center justify-center text-petrol hover:bg-petrol/10 cursor-pointer transition-colors">
-                      <Plus size={18} />
-                      <input type="file" className="hidden" onChange={(e) => handleUploadPhoto(cleaning.id!, 'before', e)} />
-                    </label>
-                  </div>
-                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                    {cleaning.photosBefore?.map((url, i) => (
-                      <div key={i} className="relative group shrink-0">
-                        <img src={url} alt="Before" className="w-24 h-24 object-cover rounded-2xl border border-slate-100 shadow-sm" />
-                        <button 
-                          onClick={() => setSelectedPhoto(url)}
-                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center text-white"
-                        >
-                          <Maximize2 size={20} />
-                        </button>
-                      </div>
-                    ))}
-                    {(!cleaning.photosBefore || cleaning.photosBefore.length === 0) && (
-                      <div className="w-24 h-24 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-300">
-                        <Camera size={24} />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Photos After */}
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                      <Camera size={16} className="text-emerald-500" />
-                      {t('photosAfter')}
-                    </h4>
-                    <label className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 hover:bg-emerald-100 cursor-pointer transition-colors">
-                      <Plus size={18} />
-                      <input type="file" className="hidden" onChange={(e) => handleUploadPhoto(cleaning.id!, 'after', e)} />
-                    </label>
-                  </div>
-                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                    {cleaning.photosAfter?.map((url, i) => (
-                      <div key={i} className="relative group shrink-0">
-                        <img src={url} alt="After" className="w-24 h-24 object-cover rounded-2xl border border-slate-100 shadow-sm" />
-                        <button 
-                          onClick={() => setSelectedPhoto(url)}
-                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center text-white"
-                        >
-                          <Maximize2 size={20} />
-                        </button>
-                      </div>
-                    ))}
-                    {(!cleaning.photosAfter || cleaning.photosAfter.length === 0) && (
-                      <div className="w-24 h-24 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-300">
-                        <Camera size={24} />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Extra Photos */}
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                      <ImageIcon size={16} className="text-gold" />
-                      {t('extraPhotos')}
-                    </h4>
-                    <label className="w-8 h-8 rounded-full bg-gold/5 flex items-center justify-center text-gold hover:bg-gold/10 cursor-pointer transition-colors">
-                      <Plus size={18} />
-                      <input type="file" className="hidden" onChange={(e) => handleUploadPhoto(cleaning.id!, 'extra', e)} />
-                    </label>
-                  </div>
-                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                    {cleaning.extraPhotos?.map((url, i) => (
-                      <div key={i} className="relative group shrink-0">
-                        <img src={url} alt="Extra" className="w-24 h-24 object-cover rounded-2xl border border-slate-100 shadow-sm" />
-                        <button 
-                          onClick={() => setSelectedPhoto(url)}
-                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center text-white"
-                        >
-                          <Maximize2 size={20} />
-                        </button>
-                      </div>
-                    ))}
-                    {(!cleaning.extraPhotos || cleaning.extraPhotos.length === 0) && (
-                      <div className="w-24 h-24 rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center text-slate-300">
-                        <ImageIcon size={24} />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )) : (
-            <div className="card text-center py-20 text-slate-400">
-              <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Calendar size={40} className="text-slate-200" />
-              </div>
-              <p className="text-lg font-medium">{t('noAssignedCleanings')}</p>
-            </div>
+            </section>
+          ) : (
+            <section className="card h-[70vh]">
+              <Calendar
+                localizer={localizer}
+                events={calendarEvents}
+                startAccessor="start"
+                endAccessor="end"
+                style={{ height: '100%' }}
+                culture={language}
+              />
+            </section>
           )}
-        </div>
-      </section>
+        </motion.div>
+      </AnimatePresence>
 
       {/* Photo Preview Modal */}
       <AnimatePresence>

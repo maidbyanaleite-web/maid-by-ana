@@ -281,7 +281,7 @@ export default function ClientDetails() {
                 )}
                 <div className="flex items-center gap-3 text-slate-600">
                   <Clock size={18} className="text-petrol" />
-                  {t('frequency')}: <span className="capitalize font-medium">{t(client.frequency)}</span>
+                  {t('frequency')}: <span className="capitalize font-medium">{t(client.frequency as any)}</span>
                 </div>
                 <div className="flex items-center gap-3 text-slate-600">
                   <FileText size={18} className="text-petrol" />
@@ -302,7 +302,7 @@ export default function ClientDetails() {
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-petrol flex items-center gap-2">
                 <Clock size={20} />
-                {t('cleaningHistory')}
+                {t('cleaningHistory' as any)}
               </h2>
             </div>
             <div className="space-y-4">

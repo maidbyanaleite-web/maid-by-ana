@@ -150,7 +150,12 @@ export const translations = {
     clientFeedback: 'Client Feedback',
     photosByClient: 'Photos by Client',
     noPhotos: 'No photos yet.',
-    netProfit: 'Net Profit'
+    netProfit: 'Net Profit',
+    todaysServices: "Today's Services",
+    calendar: 'Calendar',
+    cleaningHistory: 'Cleaning History',
+    budgetSent: 'Budget Sent',
+    numberOfCleanings: 'Number of Cleanings'
   },
   pt: {
     appName: 'Maid By Ana',
@@ -301,6 +306,11 @@ export const translations = {
     clientFeedback: 'Feedback do Cliente',
     photosByClient: 'Fotos do Cliente',
     noPhotos: 'Nenhuma foto ainda.',
-    netProfit: 'Lucro Líquido'
+    netProfit: 'Lucro Líquido',
+    todaysServices: 'Serviços de Hoje',
+    calendar: 'Calendário',
+    cleaningHistory: 'Histórico de Limpeza',
+    budgetSent: 'Orçamento Enviado',
+    numberOfCleanings: 'Número de Limpezas'
   }
 };

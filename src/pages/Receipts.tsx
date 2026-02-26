@@ -57,7 +57,7 @@ export default function Receipts() {
 
           <div className="space-y-4">
             <div>
-              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{t('numberOfCleanings')}</label>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{t('numberOfCleanings' as any)}</label>
               <input 
                 type="number"
                 min="1"

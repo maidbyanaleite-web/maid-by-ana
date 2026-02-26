@@ -235,7 +235,7 @@ export default function ClientDashboard() {
                 <p className="text-xs text-white/50 uppercase font-bold mb-1">{t('frequency')}</p>
                 <div className="flex items-center gap-2">
                   <Clock size={16} className="text-gold" />
-                  <span className="text-sm capitalize">{t(clientData.frequency)} - {t(clientData.serviceType as any)}</span>
+                  <span className="text-sm capitalize">{t(clientData.frequency as any)} - {t(clientData.serviceType as any)}</span>
                 </div>
               </div>
               <div>

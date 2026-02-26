@@ -103,7 +103,7 @@ export default function NewClient() {
               {formData.type !== 'airbnb' && (
                 <div>
                   <label className="block text-sm font-medium text-slate-600 mb-1">{t('frequency')}</label>
-                  <select className="input" value={formData.frequency} onChange={e => setFormData({...formData, frequency: e.target.value as Frequency})}>
+                  <select className="input" value={formData.frequency} onChange={e => setFormData({...formData, frequency: e.target.value as any})}>
                     <option value="semanal">{t('weekly')}</option>
                     <option value="quinzenal">{t('biweekly')}</option>
                     <option value="mensal">{t('monthly')}</option>

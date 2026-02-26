@@ -96,7 +96,7 @@ export default function Clients() {
             <div className="mt-6 pt-4 border-t border-slate-100 flex justify-between items-center">
               <div>
                 <p className="text-[10px] text-slate-400 uppercase font-bold">{t('frequency')}</p>
-                <p className="text-sm font-bold text-petrol capitalize">{t(client.frequency)}</p>
+                <p className="text-sm font-bold text-petrol capitalize">{t(client.frequency as any)}</p>
               </div>
               <div className="text-right">
                 <p className="text-[10px] text-slate-400 uppercase font-bold">{t('teamPay')}</p>

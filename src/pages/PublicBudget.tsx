@@ -325,7 +325,7 @@ export default function PublicBudget() {
               <div className="space-y-4 mb-8">
                 <div className="flex justify-between items-center border-b border-white/10 pb-2">
                   <span className="text-white/70">{t('serviceType')}</span>
-                  <span className="font-bold">{t(selectedService)}</span>
+                  <span className="font-bold">{t(selectedService as any)}</span>
                 </div>
                 <div className="space-y-2">
                   {Object.entries(extras).map(([key, value]) => (value as number) > 0 && (

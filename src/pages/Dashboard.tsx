@@ -210,7 +210,7 @@ export default function Dashboard() {
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-bold text-petrol">${budget.totalValue}</p>
-                    <p className="text-[10px] text-slate-400 uppercase font-bold">{t(budget.serviceType + 'Cleaning' as any)}</p>
+                    <p className="text-[10px] text-slate-400 uppercase font-bold">{t(budget.serviceType as any)}</p>
                   </div>
                 </div>
 
@@ -316,7 +316,7 @@ export default function Dashboard() {
                     <p className="text-xs text-slate-400 uppercase tracking-wider">{t('teamPay')}</p>
                     <p className="font-bold text-petrol">${cleaning.teamPaymentValue}</p>
                     <div className="flex gap-2">
-                      {cleaning.staffNotes && <MessageSquare size={14} className="text-blue-500" title={cleaning.staffNotes} />}
+                      {cleaning.staffNotes && <MessageSquare size={14} className="text-blue-500" />}
                       {(cleaning.photosBefore?.length || 0) + (cleaning.photosAfter?.length || 0) + (cleaning.extraPhotos?.length || 0) > 0 && (
                         <ImageIcon size={14} className="text-emerald-500" />
                       )}
