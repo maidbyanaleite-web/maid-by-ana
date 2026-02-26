@@ -10,7 +10,7 @@ export interface UserProfile {
 
 export type ClientType = 'regular' | 'airbnb' | 'esporadico';
 export type Frequency = 'mensal' | 'quinzenal' | 'semanal';
-export type ServiceType = 'regular' | 'deep' | 'move_in' | 'move_out';
+export type ServiceType = 'regular' | 'move_in' | 'move_out' | 'airbnb_cleaning' | 'esporadico';
 export type PaymentMethod = 'cash' | 'zelle' | 'venmo' | 'check' | 'apple_pay';
 
 export interface Client {
@@ -84,7 +84,7 @@ export interface BudgetRequest {
   email: string;
   phone: string;
   address: string;
-  serviceType: 'light' | 'medium' | 'deep';
+  serviceType: ServiceType;
   extras: Record<string, number>;
   totalValue: number;
   status: 'pending' | 'approved' | 'rejected';
@@ -92,9 +92,11 @@ export interface BudgetRequest {
 }
 
 export interface PricingSettings {
-  lightCleaning: number;
-  mediumCleaning: number;
-  deepCleaning: number;
+  regular: number;
+  moveInCleaning: number;
+  moveOutCleaning: number;
+  airbnbCleaning: number;
+  esporadico: number;
   petAddon: number;
   windowAddon: number;
   fridgeAddon: number;

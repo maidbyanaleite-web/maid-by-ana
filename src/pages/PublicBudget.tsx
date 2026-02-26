@@ -3,13 +3,15 @@ import { motion } from 'motion/react';
 import { Calculator, DollarSign, ArrowLeft, Send, CheckCircle2 } from 'lucide-react';
 import { db } from '../services/firebase';
 import { useLanguage } from '../contexts/LanguageContext';
-import { PricingSettings, BudgetRequest } from '../types';
+import { PricingSettings, BudgetRequest, ServiceType } from '../types';
 import { useNavigate } from 'react-router-dom';
 
 const DEFAULT_PRICING: PricingSettings = {
-  lightCleaning: 100,
-  mediumCleaning: 150,
-  deepCleaning: 250,
+  regular: 120,
+  moveInCleaning: 300,
+  moveOutCleaning: 300,
+  airbnbCleaning: 200,
+  esporadico: 150,
   petAddon: 30,
   windowAddon: 50,
   fridgeAddon: 25,
@@ -28,7 +30,7 @@ export default function PublicBudget() {
   const [submitted, setSubmitted] = useState(false);
 
   // Calculator State
-  const [selectedService, setSelectedService] = useState<'light' | 'medium' | 'deep'>('light');
+  const [selectedService, setSelectedService] = useState<ServiceType>('regular');
   const [extras, setExtras] = useState<Record<string, number>>({
     pet: 0,
     window: 0,
@@ -59,9 +61,10 @@ export default function PublicBudget() {
 
   const calculateTotal = () => {
     let total = 0;
-    if (selectedService === 'light') total += pricing.lightCleaning;
-    else if (selectedService === 'medium') total += pricing.mediumCleaning;
-    else if (selectedService === 'deep') total += pricing.deepCleaning;
+    if (selectedService === 'regular') total += pricing.regular;
+    else if (selectedService === 'move_in') total += pricing.moveInCleaning;
+    else if (selectedService === 'move_out') total += pricing.moveOutCleaning;
+    else if (selectedService === 'airbnb_cleaning') total += pricing.airbnbCleaning;
     
     total += extras.pet * pricing.petAddon;
     total += extras.window * pricing.windowAddon;
@@ -166,9 +169,10 @@ export default function PublicBudget() {
                 <label className="block text-sm font-medium text-slate-700 mb-3">{t('serviceType')}</label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {[
-                    { id: 'light', label: t('lightCleaning'), price: pricing.lightCleaning },
-                    { id: 'medium', label: t('mediumCleaning'), price: pricing.mediumCleaning },
-                    { id: 'deep', label: t('deepCleaning'), price: pricing.deepCleaning }
+                    { id: 'airbnb_cleaning', label: t('airbnb'), price: pricing.airbnbCleaning },
+                    { id: 'move_in', label: t('moveIn'), price: pricing.moveInCleaning },
+                    { id: 'move_out', label: t('moveOut'), price: pricing.moveOutCleaning },
+                    { id: 'regular', label: t('regular'), price: pricing.regular }
                   ].map((service) => (
                     <button
                       key={service.id}
@@ -304,7 +308,7 @@ export default function PublicBudget() {
               <div className="space-y-4 mb-8">
                 <div className="flex justify-between items-center border-b border-white/10 pb-2">
                   <span className="text-white/70">{t('serviceType')}</span>
-                  <span className="font-bold">{t(selectedService + 'Cleaning' as any)}</span>
+                  <span className="font-bold">{t(selectedService)}</span>
                 </div>
                 <div className="space-y-2">
                   {Object.entries(extras).map(([key, value]) => (value as number) > 0 && (

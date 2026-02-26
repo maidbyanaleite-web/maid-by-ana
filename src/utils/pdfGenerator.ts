@@ -48,7 +48,7 @@ export const generateReceipt = (client: Client, date: string, amount: number) =>
   doc.save(`Receipt_${client.name}_${date}.pdf`);
 };
 
-export const generateBatchReceipt = (client: Client, dates: string[], totalAmount: number, period: string) => {
+export const generateBatchReceipt = (client: Client, dates: string[], totalAmount: number, period: string, paymentMethod: string) => {
   const doc = new jsPDF();
   
   // Header
@@ -71,7 +71,7 @@ export const generateBatchReceipt = (client: Client, dates: string[], totalAmoun
   doc.setFontSize(10);
   doc.text(`Client: ${client.name}`, 20, 65);
   doc.text(`Address: ${client.address}`, 20, 70);
-  doc.text(`Payment Method: ${client.paymentMethod.toUpperCase()}`, 20, 75);
+  doc.text(`Payment Method: ${paymentMethod.toUpperCase()}`, 20, 75);
   doc.text(`Status: Paid`, 20, 80);
 
   autoTable(doc, {

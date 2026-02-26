@@ -113,10 +113,11 @@ export default function NewClient() {
               <div className={formData.type === 'airbnb' ? 'col-span-2' : ''}>
                 <label className="block text-sm font-medium text-slate-600 mb-1">{t('serviceType')}</label>
                 <select className="input" value={formData.serviceType} onChange={e => setFormData({...formData, serviceType: e.target.value as ServiceType})}>
-                  <option value="regular">{t('regular')}</option>
-                  <option value="deep">{t('deepCleaning')}</option>
+                  <option value="airbnb_cleaning">{t('airbnb')}</option>
                   <option value="move_in">{t('moveIn')}</option>
                   <option value="move_out">{t('moveOut')}</option>
+                  <option value="regular">{t('regular')}</option>
+                  <option value="esporadico">{t('esporadico')}</option>
                 </select>
               </div>
             </div>

@@ -23,7 +23,8 @@ import {
   X,
   Camera,
   Info,
-  RefreshCw
+  RefreshCw,
+  Edit
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { generateReceipt } from '../utils/pdfGenerator';
@@ -40,6 +41,8 @@ export default function ClientDetails() {
   const [clientCleanings, setClientCleanings] = useState<Cleaning[]>([]);
   const [selectedCleaning, setSelectedCleaning] = useState<Cleaning | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState<Client | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -190,6 +193,23 @@ export default function ClientDetails() {
     }
   };
 
+  const openEditModal = () => {
+    if (client) {
+      setEditFormData(client);
+      setIsEditModalOpen(true);
+    }
+  };
+
+  const handleUpdateClient = async () => {
+    if (!editFormData || !id) return;
+    try {
+      await db.collection('clients').doc(id).update(editFormData);
+      setIsEditModalOpen(false);
+    } catch (error) {
+      console.error("Error updating client: ", error);
+    }
+  };
+
   if (loading) return <div className="p-8 text-center">{t('processing')}</div>;
   if (!client) return <div className="p-8 text-center">Client not found.</div>;
 
@@ -218,9 +238,18 @@ export default function ClientDetails() {
                 </p>
               </div>
               {isAdmin && (
-                <button className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors">
-                  <Trash2 size={20} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={openEditModal}
+                    className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500"
+                    title={t('editClient')}
+                  >
+                    <Edit size={20} />
+                  </button>
+                  <button className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors">
+                    <Trash2 size={20} />
+                  </button>
+                </div>
               )}
             </div>
 
@@ -616,6 +645,120 @@ export default function ClientDetails() {
                 alt="Preview" 
                 className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
               />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Client Modal */}
+      <AnimatePresence>
+        {isEditModalOpen && editFormData && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white w-full max-w-2xl p-8 rounded-3xl shadow-2xl relative max-h-[90vh] overflow-y-auto"
+            >
+              <button 
+                onClick={() => setIsEditModalOpen(false)}
+                className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <X size={20} className="text-slate-400" />
+              </button>
+              
+              <h2 className="text-2xl font-bold text-petrol mb-6">{t('editClient')}</h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Service Value */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1">{t('serviceValue')}</label>
+                  <input 
+                    type="number"
+                    className="input"
+                    value={editFormData.serviceValue}
+                    onChange={e => setEditFormData({...editFormData, serviceValue: parseFloat(e.target.value) || 0})}
+                  />
+                </div>
+                {/* Team Pay */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1">{t('teamPay')}</label>
+                  <input 
+                    type="number"
+                    className="input"
+                    value={editFormData.teamPaymentValue}
+                    onChange={e => setEditFormData({...editFormData, teamPaymentValue: parseFloat(e.target.value) || 0})}
+                  />
+                </div>
+                {/* Number of Staff */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1">{t('numberOfStaff')}</label>
+                  <input 
+                    type="number"
+                    min="1"
+                    className="input"
+                    value={editFormData.numberOfStaff || 1}
+                    onChange={e => setEditFormData({...editFormData, numberOfStaff: parseInt(e.target.value) || 1})}
+                  />
+                </div>
+                {/* Frequency */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1">{t('frequency')}</label>
+                  <select 
+                    className="input"
+                    value={editFormData.frequency}
+                    onChange={e => setEditFormData({...editFormData, frequency: e.target.value as any})}
+                  >
+                    <option value="mensal">{t('monthly')}</option>
+                    <option value="quinzenal">{t('biweekly')}</option>
+                    <option value="semanal">{t('weekly')}</option>
+                  </select>
+                </div>
+                {/* Service Type */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1">{t('serviceType')}</label>
+                  <select 
+                    className="input"
+                    value={editFormData.serviceType}
+                    onChange={e => setEditFormData({...editFormData, serviceType: e.target.value as any})}
+                  >
+                    <option value="regular">{t('regular')}</option>
+                    <option value="deep">{t('deepCleaning')}</option>
+                    <option value="move_in">Move In</option>
+                    <option value="move_out">{t('moveOut')}</option>
+                    <option value="airbnb_cleaning">Airbnb Cleaning</option>
+                  </select>
+                </div>
+                {/* Extras */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-600 mb-2">{t('extras')}</label>
+                  <div className="flex items-center gap-6">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        className="w-5 h-5 accent-petrol"
+                        checked={editFormData.extras?.fridge || false}
+                        onChange={e => setEditFormData({...editFormData, extras: {...editFormData.extras, fridge: e.target.checked}})}
+                      />
+                      {t('fridgeAddon')}
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        className="w-5 h-5 accent-petrol"
+                        checked={editFormData.extras?.oven || false}
+                        onChange={e => setEditFormData({...editFormData, extras: {...editFormData.extras, oven: e.target.checked}})}
+                      />
+                      {t('ovenAddon')}
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 flex justify-end gap-4">
+                <button onClick={() => setIsEditModalOpen(false)} className="btn-secondary">{t('cancel')}</button>
+                <button onClick={handleUpdateClient} className="btn-primary">{t('save')}</button>
+              </div>
             </motion.div>
           </div>
         )}

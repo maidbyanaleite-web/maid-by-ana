@@ -4,12 +4,14 @@ import { Calculator, Clock, Home, CheckCircle2, DollarSign, Settings, Save } fro
 import { db } from '../services/firebase';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../contexts/LanguageContext';
-import { PricingSettings } from '../types';
+import { PricingSettings, ServiceType } from '../types';
 
 const DEFAULT_PRICING: PricingSettings = {
-  lightCleaning: 100,
-  mediumCleaning: 150,
-  deepCleaning: 250,
+  regular: 120,
+  moveInCleaning: 300,
+  moveOutCleaning: 300,
+  airbnbCleaning: 200,
+  esporadico: 150,
   petAddon: 30,
   windowAddon: 50,
   fridgeAddon: 25,
@@ -30,7 +32,7 @@ export default function Budget() {
   const [saving, setSaving] = useState(false);
 
   // Calculator State
-  const [selectedService, setSelectedService] = useState<'light' | 'medium' | 'deep'>('light');
+  const [selectedService, setSelectedService] = useState<ServiceType>('regular');
   const [extras, setExtras] = useState<Record<string, number>>({
     pet: 0,
     window: 0,
@@ -67,9 +69,11 @@ export default function Budget() {
     let total = 0;
     
     // Base service
-    if (selectedService === 'light') total += pricing.lightCleaning;
-    else if (selectedService === 'medium') total += pricing.mediumCleaning;
-    else if (selectedService === 'deep') total += pricing.deepCleaning;
+    if (selectedService === 'regular') total += pricing.regular;
+    else if (selectedService === 'move_in') total += pricing.moveInCleaning;
+    else if (selectedService === 'move_out') total += pricing.moveOutCleaning;
+    else if (selectedService === 'airbnb_cleaning') total += pricing.airbnbCleaning;
+    else if (selectedService === 'esporadico') total += pricing.esporadico;
     
     // Extras
     total += extras.pet * pricing.petAddon;
@@ -127,9 +131,11 @@ export default function Budget() {
               <label className="block text-sm font-medium text-slate-700 mb-3">{t('serviceType')}</label>
               <div className="grid grid-cols-1 gap-3">
                 {[
-                  { id: 'light', label: t('lightCleaning'), price: pricing.lightCleaning },
-                  { id: 'medium', label: t('mediumCleaning'), price: pricing.mediumCleaning },
-                  { id: 'deep', label: t('deepCleaning'), price: pricing.deepCleaning }
+                  { id: 'airbnb_cleaning', label: t('airbnb'), price: pricing.airbnbCleaning },
+                  { id: 'move_in', label: t('moveIn'), price: pricing.moveInCleaning },
+                  { id: 'move_out', label: t('moveOut'), price: pricing.moveOutCleaning },
+                  { id: 'regular', label: t('regular'), price: pricing.regular },
+                  { id: 'esporadico', label: t('esporadico'), price: pricing.esporadico }
                 ].map((service) => (
                   <button
                     key={service.id}
@@ -207,7 +213,7 @@ export default function Budget() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center border-b border-white/10 pb-2">
                   <span className="text-white/70">{t('serviceType')}</span>
-                  <span className="font-bold">{t(selectedService === 'light' ? 'lightCleaning' : selectedService === 'medium' ? 'mediumCleaning' : 'deepCleaning')}</span>
+                  <span className="font-bold">{t(selectedService)}</span>
                 </div>
                 <div className="space-y-2">
                   {Object.entries(extras).map(([key, value]) => (value as number) > 0 && (
@@ -251,9 +257,11 @@ export default function Budget() {
               <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">{t('serviceType')}</h3>
               <div className="space-y-4">
                 {[
-                  { id: 'lightCleaning', label: t('lightCleaning') },
-                  { id: 'mediumCleaning', label: t('mediumCleaning') },
-                  { id: 'deepCleaning', label: t('deepCleaning') }
+                  { id: 'airbnbCleaning', label: t('airbnb'), price: pricing.airbnbCleaning },
+                  { id: 'moveInCleaning', label: t('moveIn'), price: pricing.moveInCleaning },
+                  { id: 'moveOutCleaning', label: t('moveOut'), price: pricing.moveOutCleaning },
+                  { id: 'regular', label: t('regular'), price: pricing.regular },
+                  { id: 'esporadico', label: t('esporadico'), price: pricing.esporadico }
                 ].map(field => (
                   <div key={field.id}>
                     <label className="block text-xs font-bold text-slate-500 mb-1">{field.label}</label>
