@@ -98,15 +98,17 @@ export default function NewClient() {
           <div className="space-y-4">
             <h3 className="font-bold text-slate-700 border-b pb-2">{t('budget')}</h3>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">{t('frequency')}</label>
-                <select className="input" value={formData.frequency} onChange={e => setFormData({...formData, frequency: e.target.value as Frequency})}>
-                  <option value="semanal">{t('weekly')}</option>
-                  <option value="quinzenal">{t('biweekly')}</option>
-                  <option value="mensal">{t('monthly')}</option>
-                </select>
-              </div>
-              <div>
+              {formData.type !== 'airbnb' && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1">{t('frequency')}</label>
+                  <select className="input" value={formData.frequency} onChange={e => setFormData({...formData, frequency: e.target.value as Frequency})}>
+                    <option value="semanal">{t('weekly')}</option>
+                    <option value="quinzenal">{t('biweekly')}</option>
+                    <option value="mensal">{t('monthly')}</option>
+                  </select>
+                </div>
+              )}
+              <div className={formData.type === 'airbnb' ? 'col-span-2' : ''}>
                 <label className="block text-sm font-medium text-slate-600 mb-1">{t('serviceType')}</label>
                 <select className="input" value={formData.serviceType} onChange={e => setFormData({...formData, serviceType: e.target.value as ServiceType})}>
                   <option value="regular">{t('regular')}</option>
@@ -135,39 +137,43 @@ export default function NewClient() {
                 <option value="check">Check</option>
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-600 mb-1">{t('nextPayment')}</label>
-              <input type="date" className="input" onChange={e => setFormData({...formData, nextPaymentDue: e.target.value})} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-600 mb-1">{t('numberOfStaff')}</label>
-                <input type="number" min="1" className="input" defaultValue="1" onChange={e => setFormData({...formData, numberOfStaff: Number(e.target.value)})} />
-              </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-slate-600 mb-1">{t('assignStaff')}</label>
-                <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto p-3 border rounded-xl bg-slate-50">
-                  {staffList.map(staff => (
-                    <label key={staff.uid} className="flex items-center gap-2 p-2 hover:bg-white rounded-lg cursor-pointer transition-colors">
-                      <input 
-                        type="checkbox" 
-                        className="w-4 h-4 accent-petrol"
-                        checked={(formData.assignedStaffIds || []).includes(staff.uid)}
-                        onChange={e => {
-                          const current = formData.assignedStaffIds || [];
-                          if (e.target.checked) {
-                            setFormData({...formData, assignedStaffIds: [...current, staff.uid]});
-                          } else {
-                            setFormData({...formData, assignedStaffIds: current.filter(id => id !== staff.uid)});
-                          }
-                        }}
-                      />
-                      <span className="text-sm text-slate-700">{staff.name}</span>
-                    </label>
-                  ))}
+            {formData.type !== 'airbnb' && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1">{t('nextPayment')}</label>
+                  <input type="date" className="input" onChange={e => setFormData({...formData, nextPaymentDue: e.target.value})} />
                 </div>
-              </div>
-            </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-600 mb-1">{t('numberOfStaff')}</label>
+                    <input type="number" min="1" className="input" defaultValue="1" onChange={e => setFormData({...formData, numberOfStaff: Number(e.target.value)})} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-slate-600 mb-1">{t('assignStaff')}</label>
+                    <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto p-3 border rounded-xl bg-slate-50">
+                      {staffList.map(staff => (
+                        <label key={staff.uid} className="flex items-center gap-2 p-2 hover:bg-white rounded-lg cursor-pointer transition-colors">
+                          <input 
+                            type="checkbox" 
+                            className="w-4 h-4 accent-petrol"
+                            checked={(formData.assignedStaffIds || []).includes(staff.uid)}
+                            onChange={e => {
+                              const current = formData.assignedStaffIds || [];
+                              if (e.target.checked) {
+                                setFormData({...formData, assignedStaffIds: [...current, staff.uid]});
+                              } else {
+                                setFormData({...formData, assignedStaffIds: current.filter(id => id !== staff.uid)});
+                              }
+                            }}
+                          />
+                          <span className="text-sm text-slate-700">{staff.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
             <div className="flex items-center gap-3 pt-2">
               <input 
                 type="checkbox" 

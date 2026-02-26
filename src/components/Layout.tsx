@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { auth } from '../services/firebase';
-import { LayoutDashboard, Users, Calculator, LogOut, Menu, X, Languages } from 'lucide-react';
+import { LayoutDashboard, Users, Calculator, LogOut, Menu, X, Languages, FileText } from 'lucide-react';
 import { useState } from 'react';
 import NotificationCenter from './NotificationCenter';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -25,6 +25,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   if (isAdmin) {
     navItems.push({ to: '/clients', icon: Users, label: t('clients') });
     navItems.push({ to: '/budget', icon: Calculator, label: t('budget') });
+    navItems.push({ to: '/receipts', icon: FileText, label: t('receipts') });
     navItems.push({ to: '/staff', icon: Users, label: t('manageStaff') });
   }
 

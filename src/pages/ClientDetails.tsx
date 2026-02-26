@@ -375,14 +375,6 @@ export default function ClientDetails() {
                 <Plus size={18} />
                 {t('addCleaning')}
               </button>
-
-              <button 
-                onClick={() => generateReceipt(client, format(new Date(), 'MM/dd/yyyy'), client.serviceValue)}
-                className="w-full btn-primary flex items-center justify-center gap-2"
-              >
-                <FileText size={18} />
-                Generate Receipt
-              </button>
             </div>
           )}
 
