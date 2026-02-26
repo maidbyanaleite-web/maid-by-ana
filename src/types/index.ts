@@ -8,7 +8,7 @@ export interface UserProfile {
   clientId?: string;
 }
 
-export type ClientType = 'regular' | 'airbnb';
+export type ClientType = 'regular' | 'airbnb' | 'esporadico';
 export type Frequency = 'mensal' | 'quinzenal' | 'semanal';
 export type ServiceType = 'regular' | 'deep' | 'move_in' | 'move_out';
 export type PaymentMethod = 'cash' | 'zelle' | 'venmo' | 'check';

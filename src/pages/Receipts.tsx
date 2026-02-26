@@ -166,6 +166,14 @@ export default function Receipts() {
                       <span className="text-slate-400">Agenda:</span>
                       <span className="font-bold text-petrol">{receiptType === 'single' ? 1 : receiptType === 'biweekly' ? 2 : 4}</span>
                     </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-400">{t('paymentMethod')}:</span>
+                      <span className="font-bold text-petrol capitalize">{selectedClient.paymentMethod}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-400">{t('status')}:</span>
+                      <span className="font-bold text-emerald-500">{t('paid')}</span>
+                    </div>
                   </div>
                 </div>
               </div>

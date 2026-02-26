@@ -41,6 +41,7 @@ export const translations = {
     cancel: 'Cancel',
     regular: 'Regular',
     airbnb: 'Airbnb',
+    esporadico: 'Esporádico',
     weekly: 'Weekly',
     biweekly: 'Bi-weekly',
     monthly: 'Monthly',
@@ -137,6 +138,8 @@ export const translations = {
     billTo: 'BILL TO',
     summary: 'SUMMARY',
     serviceValue: 'SERVICE VALUE',
+    paymentMethod: 'Payment Method',
+    paid: 'Paid',
   },
   pt: {
     appName: 'Maid By Ana',
@@ -178,6 +181,7 @@ export const translations = {
     cancel: 'Cancelar',
     regular: 'Regular',
     airbnb: 'Airbnb',
+    esporadico: 'Esporádico',
     weekly: 'Semanal',
     biweekly: 'Quinzenal',
     monthly: 'Mensal',
@@ -274,5 +278,7 @@ export const translations = {
     billTo: 'COBRAR DE',
     summary: 'RESUMO',
     serviceValue: 'VALOR DO SERVIÇO',
+    paymentMethod: 'Forma de Pagamento',
+    paid: 'Pago',
   }
 };

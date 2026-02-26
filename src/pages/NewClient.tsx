@@ -19,7 +19,8 @@ export default function NewClient() {
     extras: { fridge: false, oven: false },
     gallery: [],
     cleaningDates: [],
-    paymentDates: []
+    paymentDates: [],
+    budgetSent: false
   });
 
   useEffect(() => {
@@ -77,6 +78,7 @@ export default function NewClient() {
               <select className="input" value={formData.type} onChange={e => setFormData({...formData, type: e.target.value as ClientType})}>
                 <option value="regular">{t('regular')}</option>
                 <option value="airbnb">{t('airbnb')}</option>
+                <option value="esporadico">{t('esporadico')}</option>
               </select>
             </div>
             <div>
@@ -177,11 +179,12 @@ export default function NewClient() {
             <div className="flex items-center gap-3 pt-2">
               <input 
                 type="checkbox" 
-                id="budgetRequested" 
+                id="budgetSent" 
                 className="w-5 h-5 accent-petrol"
-                onChange={e => setFormData({...formData, budgetRequested: e.target.checked, budgetSent: false})} 
+                checked={formData.budgetSent || false}
+                onChange={e => setFormData({...formData, budgetSent: e.target.checked})} 
               />
-              <label htmlFor="budgetRequested" className="text-sm font-medium text-slate-600">{t('budgetRequested')}</label>
+              <label htmlFor="budgetSent" className="text-sm font-medium text-slate-600">{t('budgetSent')}</label>
             </div>
           </div>
         </div>
