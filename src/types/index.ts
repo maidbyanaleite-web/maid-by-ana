@@ -71,6 +71,7 @@ export interface Cleaning {
   photosByClient?: string[];
   staffNotes?: string;
   clientFeedback?: string;
+  adminNotes?: string;
 }
 
 export interface BudgetResult {

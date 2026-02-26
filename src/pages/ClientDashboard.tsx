@@ -223,24 +223,30 @@ export default function ClientDashboard() {
               <Info size={20} className="text-gold" />
               {t('myServices')}
             </h2>
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <MapPin size={18} className="text-gold" />
-                <span className="text-sm">{clientData.address}</span>
+            <div className="space-y-5">
+              <div>
+                <p className="text-xs text-white/50 uppercase font-bold mb-1">{t('address')}</p>
+                <div className="flex items-center gap-2">
+                  <MapPin size={16} className="text-gold" />
+                  <span className="text-sm">{clientData.address}</span>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <Clock size={18} className="text-gold" />
-                <span className="text-sm capitalize">{t(clientData.frequency)} - {t(clientData.serviceType as any)}</span>
+              <div>
+                <p className="text-xs text-white/50 uppercase font-bold mb-1">{t('frequency')}</p>
+                <div className="flex items-center gap-2">
+                  <Clock size={16} className="text-gold" />
+                  <span className="text-sm capitalize">{t(clientData.frequency)} - {t(clientData.serviceType as any)}</span>
+                </div>
               </div>
-              <div className="pt-4 border-t border-white/10">
+              <div>
                 <p className="text-xs text-white/50 uppercase font-bold mb-1">{t('serviceValueAgreed')}</p>
                 <p className="text-3xl font-bold text-gold">${clientData.serviceValue}</p>
               </div>
-              <div className="pt-4 border-t border-white/10">
+              <div>
                 <p className="text-xs text-white/50 uppercase font-bold mb-1">{t('numberOfStaff')}</p>
                 <p className="text-xl font-bold text-gold">{clientData.numberOfStaff || 1}</p>
               </div>
-              <div className="pt-4 border-t border-white/10">
+              <div>
                 <p className="text-xs text-white/50 uppercase font-bold mb-1">{t('paymentMethod')}</p>
                 <div className="flex items-center gap-2">
                   <CreditCard size={16} className="text-gold" />

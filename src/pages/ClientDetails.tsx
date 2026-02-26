@@ -29,6 +29,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { generateReceipt } from '../utils/pdfGenerator';
 import { format } from 'date-fns';
+import CleaningCard from '../components/CleaningCard';
 
 export default function ClientDetails() {
   const { id } = useParams();
@@ -296,32 +297,21 @@ export default function ClientDetails() {
             </div>
           </div>
 
-          {/* Gallery */}
+          {/* Cleaning History */}
           <div className="card">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-petrol flex items-center gap-2">
-                <ImageIcon size={20} />
-                Service Gallery
+                <Clock size={20} />
+                {t('cleaningHistory')}
               </h2>
-              <label className="btn-secondary text-sm cursor-pointer">
-                <Plus size={16} className="inline mr-1" />
-                Add Photo
-                <input type="file" className="hidden" onChange={handleUploadImage} />
-              </label>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {client.gallery?.map((url, i) => (
-                <motion.img 
-                  key={i} 
-                  src={url} 
-                  alt="Cleaning" 
-                  className="w-full h-40 object-cover rounded-xl cursor-pointer hover:opacity-90 transition-opacity"
-                  whileHover={{ scale: 1.02 }}
-                />
+            <div className="space-y-4">
+              {clientCleanings.map(cleaning => (
+                <CleaningCard cleaning={cleaning} isAdmin={isAdmin || false} />
               ))}
-              {(!client.gallery || client.gallery.length === 0) && (
+              {clientCleanings.length === 0 && (
                 <div className="col-span-full py-12 text-center text-slate-400 border-2 border-dashed border-slate-100 rounded-2xl">
-                  No photos uploaded yet.
+                  <p>{t('noCleanings')}</p>
                 </div>
               )}
             </div>
@@ -357,12 +347,12 @@ export default function ClientDetails() {
                 <span className="text-xl font-bold text-gold">${client.teamPaymentValue}</span>
               </div>
               <div className="flex justify-between items-center border-b border-white/10 pb-2">
-                <span className="text-white/70">{t('numberOfStaff')}</span>
+                                  <span className="text-white/70">{t('numberOfStaff')}</span>
                 <span className="text-xl font-bold">{client.numberOfStaff || 1}</span>
               </div>
               {isAdmin && (
                 <div className="flex justify-between items-center pt-2">
-                  <span className="text-white/70">Net Profit</span>
+                  <span className="text-white/70">{t('netProfit')}</span>
                   <span className="text-xl font-bold text-emerald-400">${client.serviceValue - client.teamPaymentValue}</span>
                 </div>
               )}
