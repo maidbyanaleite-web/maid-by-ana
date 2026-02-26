@@ -139,6 +139,11 @@ export const translations = {
     billTo: 'BILL TO',
     summary: 'SUMMARY',
     paid: 'Paid',
+    brandSettings: 'Brand Settings',
+    customizeYourBrand: 'Customize the look and feel of your application.',
+    primaryColor: 'Primary Color',
+    secondaryColor: 'Secondary Color',
+    logo: 'Logo',
   },
   pt: {
     appName: 'Maid By Ana',
@@ -278,5 +283,10 @@ export const translations = {
     billTo: 'COBRAR DE',
     summary: 'RESUMO',
     paid: 'Pago',
+    brandSettings: 'Configurações da Marca',
+    customizeYourBrand: 'Personalize a aparência do seu aplicativo.',
+    primaryColor: 'Cor Primária',
+    secondaryColor: 'Cor Secundária',
+    logo: 'Logotipo',
   }
 };

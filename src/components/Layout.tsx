@@ -1,22 +1,33 @@
 import { ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { auth } from '../services/firebase';
-import { LayoutDashboard, Users, Calculator, LogOut, Menu, X, Languages, FileText } from 'lucide-react';
-import { useState } from 'react';
+import { auth, db } from '../services/firebase';
+import { LayoutDashboard, Users, Calculator, LogOut, Menu, X, Languages, FileText, Settings } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import NotificationCenter from './NotificationCenter';
 import { useLanguage } from '../contexts/LanguageContext';
+import { BrandSettings } from '../types';
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { isAdmin, user } = useAuth();
   const { t, language, setLanguage } = useLanguage();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [brandSettings, setBrandSettings] = useState<BrandSettings | null>(null);
 
   const handleLogout = async () => {
     await auth.signOut();
     navigate('/login');
   };
+
+  useEffect(() => {
+    const unsub = db.collection('settings').doc('brand').onSnapshot((doc) => {
+      if (doc.exists) {
+        setBrandSettings(doc.data() as BrandSettings);
+      }
+    });
+    return () => unsub();
+  }, []);
 
   const navItems = [
     { to: '/', icon: LayoutDashboard, label: t('dashboard') },
@@ -27,6 +38,7 @@ export default function Layout({ children }: { children: ReactNode }) {
     navItems.push({ to: '/budget', icon: Calculator, label: t('budget') });
     navItems.push({ to: '/receipts', icon: FileText, label: t('receipts') });
     navItems.push({ to: '/staff', icon: Users, label: t('manageStaff') });
+    navItems.push({ to: '/brand-settings', icon: Settings, label: t('brandSettings') });
   }
 
   return (
@@ -34,7 +46,11 @@ export default function Layout({ children }: { children: ReactNode }) {
       {/* Sidebar - Desktop */}
       <aside className="hidden md:flex w-64 bg-petrol text-white flex-col p-6 sticky top-0 h-screen">
         <div className="mb-10">
-          <h1 className="text-2xl font-bold text-gold">Maid By Ana</h1>
+          {brandSettings?.logoUrl ? (
+            <img src={brandSettings.logoUrl} alt={brandSettings.appName} className="h-12 mb-2" />
+          ) : (
+            <h1 className="text-2xl font-bold text-gold">{brandSettings?.appName || 'Maid By Ana'}</h1>
+          )}
           <p className="text-white/50 text-xs uppercase tracking-widest mt-1">Management System</p>
         </div>
 
@@ -66,7 +82,11 @@ export default function Layout({ children }: { children: ReactNode }) {
 
       {/* Mobile Nav */}
       <div className="md:hidden bg-petrol p-4 flex justify-between items-center text-white">
-        <h1 className="text-xl font-bold text-gold">Maid By Ana</h1>
+        {brandSettings?.logoUrl ? (
+          <img src={brandSettings.logoUrl} alt={brandSettings.appName} className="h-8" />
+        ) : (
+          <h1 className="text-xl font-bold text-gold">{brandSettings?.appName || 'Maid By Ana'}</h1>
+        )}
         <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
           {isMobileMenuOpen ? <X /> : <Menu />}
         </button>

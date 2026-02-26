@@ -1,8 +1,10 @@
 @import "tailwindcss";
 
 @theme {
-  --color-petrol: #004d4d;
-  --color-gold: #d4af37;
+  --color-primary: #004d4d;
+  --color-secondary: #d4af37;
+  --color-petrol: var(--color-primary);
+  --color-gold: var(--color-secondary);
   --color-gold-light: #f4e1a1;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 }

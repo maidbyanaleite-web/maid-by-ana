@@ -105,3 +105,10 @@ export interface PricingSettings {
   roomAddon: number;
   bathroomAddon: number;
 }
+
+export interface BrandSettings {
+  appName: string;
+  logoUrl: string;
+  primaryColor: string;
+  secondaryColor: string;
+}

@@ -14,6 +14,9 @@ import ClientDetails from './pages/ClientDetails';
 import Budget from './pages/Budget';
 import PublicBudget from './pages/PublicBudget';
 import Receipts from './pages/Receipts';
+import BrandSettingsPage from './pages/BrandSettings';
+
+import BrandProvider from './components/BrandProvider';
 
 function PrivateRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -33,6 +36,7 @@ export default function App() {
   return (
     <AuthProvider>
       <LanguageProvider>
+        <BrandProvider />
         <Router>
           <Routes>
             <Route path="/login" element={<Login />} />
@@ -43,6 +47,7 @@ export default function App() {
             <Route path="/clients/:id" element={<PrivateRoute><ClientDetails /></PrivateRoute>} />
             <Route path="/budget" element={<PrivateRoute><Budget /></PrivateRoute>} />
             <Route path="/receipts" element={<PrivateRoute><Receipts /></PrivateRoute>} />
+            <Route path="/brand-settings" element={<PrivateRoute><BrandSettingsPage /></PrivateRoute>} />
             <Route path="/public-budget" element={<PublicBudget />} />
           </Routes>
         </Router>
