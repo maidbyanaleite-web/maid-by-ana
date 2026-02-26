@@ -47,11 +47,11 @@ export default function Layout({ children }: { children: ReactNode }) {
       <aside className="hidden md:flex w-64 bg-petrol text-white flex-col p-6 sticky top-0 h-screen">
         <div className="mb-10">
           {brandSettings?.logoUrl ? (
-            <img src={brandSettings.logoUrl} alt={brandSettings.appName} className="h-12 mb-2" />
+            <img src={brandSettings.logoUrl} alt={brandSettings.appName} className="mb-2" style={{ height: `${brandSettings.logoSize * 4}px` }} />
           ) : (
             <h1 className="text-2xl font-bold text-gold">{brandSettings?.appName || 'Maid By Ana'}</h1>
           )}
-          <p className="text-white/50 text-xs uppercase tracking-widest mt-1">Management System</p>
+          <p className="text-white/50 text-xs uppercase tracking-widest mt-1">{brandSettings?.subtitle || 'Management System'}</p>
         </div>
 
         <nav className="flex-1 space-y-2">

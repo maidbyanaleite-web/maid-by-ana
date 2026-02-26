@@ -9,6 +9,8 @@ const DEFAULT_BRAND_SETTINGS: BrandSettings = {
   logoUrl: '',
   primaryColor: '#083344',
   secondaryColor: '#f59e0b',
+  subtitle: 'Management System',
+  logoSize: 8,
 };
 
 export default function BrandSettingsPage() {
@@ -77,6 +79,16 @@ export default function BrandSettingsPage() {
           />
         </div>
 
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">{t('subtitle')}</label>
+          <input 
+            type="text" 
+            className="input"
+            value={settings.subtitle}
+            onChange={e => setSettings({...settings, subtitle: e.target.value})}
+          />
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">{t('primaryColor')}</label>
@@ -117,6 +129,19 @@ export default function BrandSettingsPage() {
             <input type="file" accept="image/*" className="text-sm" onChange={handleLogoUpload} disabled={uploading} />
             {uploading && <p className="text-xs text-slate-500">{t('processing')}</p>}
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">{t('logoSize')} ({settings.logoSize * 4}px)</label>
+          <input 
+            type="range" 
+            min="4" 
+            max="24" 
+            step="1" 
+            className="w-full"
+            value={settings.logoSize}
+            onChange={e => setSettings({...settings, logoSize: parseInt(e.target.value, 10)})}
+          />
         </div>
 
         <div className="flex justify-end pt-6">

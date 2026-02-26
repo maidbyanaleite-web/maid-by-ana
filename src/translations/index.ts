@@ -144,6 +144,8 @@ export const translations = {
     primaryColor: 'Primary Color',
     secondaryColor: 'Secondary Color',
     logo: 'Logo',
+    subtitle: 'Subtitle',
+    logoSize: 'Logo Size',
   },
   pt: {
     appName: 'Maid By Ana',
@@ -288,5 +290,7 @@ export const translations = {
     primaryColor: 'Cor Primária',
     secondaryColor: 'Cor Secundária',
     logo: 'Logotipo',
+    subtitle: 'Subtítulo',
+    logoSize: 'Tamanho do Logotipo',
   }
 };

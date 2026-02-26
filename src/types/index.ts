@@ -111,4 +111,6 @@ export interface BrandSettings {
   logoUrl: string;
   primaryColor: string;
   secondaryColor: string;
+  subtitle: string;
+  logoSize: number;
 }

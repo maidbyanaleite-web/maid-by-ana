@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { Calculator, DollarSign, ArrowLeft, Send, CheckCircle2 } from 'lucide-react';
 import { db } from '../services/firebase';
 import { useLanguage } from '../contexts/LanguageContext';
-import { PricingSettings, BudgetRequest, ServiceType } from '../types';
+import { PricingSettings, BudgetRequest, ServiceType, BrandSettings } from '../types';
 import { useNavigate } from 'react-router-dom';
 
 const DEFAULT_PRICING: PricingSettings = {
@@ -28,6 +28,7 @@ export default function PublicBudget() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [brandSettings, setBrandSettings] = useState<BrandSettings | null>(null);
 
   // Calculator State
   const [selectedService, setSelectedService] = useState<ServiceType>('regular');
@@ -55,6 +56,15 @@ export default function PublicBudget() {
         setPricing({ ...DEFAULT_PRICING, ...doc.data() } as PricingSettings);
       }
       setLoading(false);
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    const unsub = db.collection('settings').doc('brand').onSnapshot((doc) => {
+      if (doc.exists) {
+        setBrandSettings(doc.data() as BrandSettings);
+      }
     });
     return () => unsub();
   }, []);
@@ -139,10 +149,11 @@ export default function PublicBudget() {
     <div className="min-h-screen bg-slate-50 pb-12">
       <nav className="bg-petrol text-white p-4 sticky top-0 z-50 shadow-lg">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <button onClick={() => navigate('/login')} className="flex items-center gap-2 hover:text-gold transition-colors">
-            <ArrowLeft size={20} />
-            <span className="font-bold">{t('backToLogin')}</span>
-          </button>
+          {brandSettings?.logoUrl ? (
+            <img src={brandSettings.logoUrl} alt={brandSettings.appName} className="h-8" />
+          ) : (
+            <h1 className="text-xl font-bold text-gold">{brandSettings?.appName || 'Maid By Ana'}</h1>
+          )}
           <div className="flex gap-2">
             <button onClick={() => setLanguage('en')} className={`px-3 py-1 text-xs font-bold rounded-full ${language === 'en' ? 'bg-gold text-petrol' : 'bg-white/10'}`}>EN</button>
             <button onClick={() => setLanguage('pt')} className={`px-3 py-1 text-xs font-bold rounded-full ${language === 'pt' ? 'bg-gold text-petrol' : 'bg-white/10'}`}>PT</button>
@@ -153,7 +164,7 @@ export default function PublicBudget() {
       <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-8">
         <header className="text-center space-y-2">
           <h1 className="text-4xl font-bold text-petrol">{t('getEstimate')}</h1>
-          <p className="text-slate-500">{t('managementSystem')}</p>
+          <p className="text-slate-500">{brandSettings?.subtitle || 'Management System'}</p>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -331,7 +342,7 @@ export default function PublicBudget() {
                 form="public-budget-form"
                 type="submit"
                 disabled={submitting}
-                className="w-full btn-primary bg-gold text-petrol hover:bg-gold/90 py-4 text-lg font-bold rounded-2xl shadow-lg shadow-gold/20 transition-all flex items-center justify-center gap-2"
+                className="w-full btn-primary bg-petrol text-gold hover:bg-petrol/90 py-4 text-lg font-bold rounded-2xl shadow-xl shadow-petrol/30 transition-all transform hover:scale-105 flex items-center justify-center gap-2"
               >
                 {submitting ? t('processing') : (
                   <>

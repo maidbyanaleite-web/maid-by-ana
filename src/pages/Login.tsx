@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../contexts/LanguageContext';
+import { BrandSettings } from '../types';
 
 export default function Login() {
   const { t, language, setLanguage } = useLanguage();
@@ -14,6 +15,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [name, setName] = useState('');
+  const [brandSettings, setBrandSettings] = useState<BrandSettings | null>(null);
   
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -24,6 +26,15 @@ export default function Login() {
       navigate('/');
     }
   }, [user, navigate]);
+
+  useEffect(() => {
+    const unsub = db.collection('settings').doc('brand').onSnapshot((doc) => {
+      if (doc.exists) {
+        setBrandSettings(doc.data() as BrandSettings);
+      }
+    });
+    return () => unsub();
+  }, []);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,8 +88,12 @@ export default function Login() {
         className="bg-white w-full max-w-md p-8 rounded-3xl shadow-2xl"
       >
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-petrol mb-2">{t('appName')}</h1>
-          <p className="text-slate-500">{isRegistering ? t('createAccount') : t('loginTitle')}</p>
+          {brandSettings?.logoUrl ? (
+            <img src={brandSettings.logoUrl} alt={brandSettings.appName} className="h-24 w-auto mx-auto mb-4" />
+          ) : (
+            <h1 className="text-3xl font-bold text-petrol mb-2">{brandSettings?.appName || t('appName')}</h1>
+          )}
+          <p className="text-slate-500">{isRegistering ? t('createAccount') : (brandSettings?.subtitle || t('loginTitle'))}</p>
         </div>
 
         <form onSubmit={handleAuth} className="space-y-6">
