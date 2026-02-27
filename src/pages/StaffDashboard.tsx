@@ -389,9 +389,9 @@ export default function StaffDashboard() {
                           </button>
                           <button 
                             onClick={() => handleDeletePhoto(cleaning.id!, 'before', url)}
-                            className="p-1 hover:bg-red-500/20 rounded-full text-red-500"
+                            className="p-1 bg-red-500/80 hover:bg-red-600/80 rounded-full text-white"
                           >
-                            <Trash2 size={18} />
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </div>
@@ -429,9 +429,9 @@ export default function StaffDashboard() {
                           </button>
                           <button 
                             onClick={() => handleDeletePhoto(cleaning.id!, 'after', url)}
-                            className="p-1 hover:bg-red-500/20 rounded-full text-red-500"
+                            className="p-1 bg-red-500/80 hover:bg-red-600/80 rounded-full text-white"
                           >
-                            <Trash2 size={18} />
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </div>
@@ -469,9 +469,9 @@ export default function StaffDashboard() {
                           </button>
                           <button 
                             onClick={() => handleDeletePhoto(cleaning.id!, 'extra', url)}
-                            className="p-1 hover:bg-red-500/20 rounded-full text-red-500"
+                            className="p-1 bg-red-500/80 hover:bg-red-600/80 rounded-full text-white"
                           >
-                            <Trash2 size={18} />
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </div>
