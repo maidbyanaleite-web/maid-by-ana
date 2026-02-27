@@ -296,9 +296,29 @@ export default function StaffDashboard() {
                 </div>
                 <div className="col-span-2 space-y-1">
                   <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{t('clientType')}</p>
-                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase ${cleaning.clientType === 'airbnb' ? 'bg-gold/10 text-gold' : 'bg-petrol/10 text-petrol'}`}>
-                    {t(cleaning.clientType)}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase ${
+                      cleaning.clientType === 'airbnb' ? 'bg-gold/10 text-gold' : 'bg-petrol/10 text-petrol'
+                    }`}>
+                      {t(cleaning.clientType)}
+                    </span>
+                    <span className="text-xs text-slate-500 font-medium capitalize">
+                      ({t(cleaning.serviceType as any)})
+                    </span>
+                  </div>
+                </div>
+                <div className="col-span-full space-y-1">
+                  <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{t('extras')}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(cleaning.extras || {}).filter(([_, value]) => value).map(([key]) => (
+                      <span key={key} className="bg-slate-100 text-slate-600 text-xs font-medium px-2 py-1 rounded">
+                        {t(key as any)}
+                      </span>
+                    ))}
+                    {Object.values(cleaning.extras || {}).every(v => !v) && (
+                      <span className="text-xs text-slate-400 italic">No extras</span>
+                    )}
+                  </div>
                 </div>
               </div>
 

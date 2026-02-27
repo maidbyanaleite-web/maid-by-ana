@@ -55,6 +55,8 @@ export interface Cleaning {
   clientName: string;
   clientAddress: string;
   clientType: ClientType;
+  serviceType: ServiceType;
+  extras: Client['extras'];
   date: string;
   assignedStaffIds: string[];
   assignedStaffNames: string[];

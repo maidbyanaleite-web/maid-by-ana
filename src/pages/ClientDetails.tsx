@@ -264,6 +264,8 @@ export default function ClientDetails() {
         clientName: client.name,
         clientAddress: client.address,
         clientType: client.type,
+        serviceType: client.serviceType,
+        extras: client.extras,
         date: newCleaningDate,
         scheduledTime: newCleaningTime,
         assignedStaffIds: client.assignedStaffIds || [],
