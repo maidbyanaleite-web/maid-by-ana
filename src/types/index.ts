@@ -9,7 +9,7 @@ export interface UserProfile {
 }
 
 export type ClientType = 'regular' | 'airbnb' | 'esporadico';
-export type Frequency = 'mensal' | 'quinzenal' | 'semanal';
+export type Frequency = 'mensal' | 'quinzenal' | 'semanal' | 'esporadico';
 export type ServiceType = 'regular' | 'move_in' | 'move_out' | 'airbnb_cleaning' | 'esporadico';
 export type PaymentMethod = 'cash' | 'zelle' | 'venmo' | 'check' | 'apple_pay';
 

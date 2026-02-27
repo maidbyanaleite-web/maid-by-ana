@@ -183,15 +183,21 @@ export default function ClientDetails() {
 
   const handleUpdateServiceInfo = async () => {
     if (!client || !id) return;
-    const newFrequency = prompt(`${t('frequency')} (mensal, quinzenal, semanal)`, client.frequency);
-    const newServiceType = prompt(`${t('serviceType')} (regular, deep, move_in, move_out)`, client.serviceType);
-
-    if (newFrequency !== null && newServiceType !== null) {
-      await db.collection('clients').doc(id).update({
-        frequency: newFrequency as any,
-        serviceType: newServiceType as any
-      });
+    
+    let newFrequency = client.frequency;
+    if (client.type !== 'airbnb') {
+      const freq = prompt(`${t('frequency')} (mensal, quinzenal, semanal)`, client.frequency);
+      if (freq === null) return;
+      newFrequency = freq as any;
     }
+
+    const newServiceType = prompt(`${t('serviceType')} (regular, deep, move_in, move_out, airbnb_cleaning)`, client.serviceType);
+    if (newServiceType === null) return;
+
+    await db.collection('clients').doc(id).update({
+      frequency: newFrequency,
+      serviceType: newServiceType as any
+    });
   };
 
   const openEditModal = () => {
@@ -279,10 +285,12 @@ export default function ClientDetails() {
                     <RefreshCw size={14} />
                   </button>
                 )}
-                <div className="flex items-center gap-3 text-slate-600">
-                  <Clock size={18} className="text-petrol" />
-                  {t('frequency')}: <span className="capitalize font-medium">{t(client.frequency as any)}</span>
-                </div>
+                {client.type !== 'airbnb' && (
+                  <div className="flex items-center gap-3 text-slate-600">
+                    <Clock size={18} className="text-petrol" />
+                    {t('frequency')}: <span className="capitalize font-medium">{t(client.frequency as any)}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-3 text-slate-600">
                   <FileText size={18} className="text-petrol" />
                   {t('serviceType')}: <span className="capitalize font-medium">{t(client.serviceType as any)}</span>
@@ -702,18 +710,20 @@ export default function ClientDetails() {
                   />
                 </div>
                 {/* Frequency */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-1">{t('frequency')}</label>
-                  <select 
-                    className="input"
-                    value={editFormData.frequency}
-                    onChange={e => setEditFormData({...editFormData, frequency: e.target.value as any})}
-                  >
-                    <option value="mensal">{t('monthly')}</option>
-                    <option value="quinzenal">{t('biweekly')}</option>
-                    <option value="semanal">{t('weekly')}</option>
-                  </select>
-                </div>
+                {editFormData.type !== 'airbnb' && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-600 mb-1">{t('frequency')}</label>
+                    <select 
+                      className="input"
+                      value={editFormData.frequency}
+                      onChange={e => setEditFormData({...editFormData, frequency: e.target.value as any})}
+                    >
+                      <option value="mensal">{t('monthly')}</option>
+                      <option value="quinzenal">{t('biweekly')}</option>
+                      <option value="semanal">{t('weekly')}</option>
+                    </select>
+                  </div>
+                )}
                 {/* Service Type */}
                 <div>
                   <label className="block text-sm font-medium text-slate-600 mb-1">{t('serviceType')}</label>

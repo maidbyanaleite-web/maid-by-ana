@@ -231,13 +231,15 @@ export default function ClientDashboard() {
                   <span className="text-sm">{clientData.address}</span>
                 </div>
               </div>
-              <div>
-                <p className="text-xs text-white/50 uppercase font-bold mb-1">{t('frequency')}</p>
-                <div className="flex items-center gap-2">
-                  <Clock size={16} className="text-gold" />
-                  <span className="text-sm capitalize">{t(clientData.frequency as any)} - {t(clientData.serviceType as any)}</span>
+              {clientData.type !== 'airbnb' && (
+                <div>
+                  <p className="text-xs text-white/50 uppercase font-bold mb-1">{t('frequency')}</p>
+                  <div className="flex items-center gap-2">
+                    <Clock size={16} className="text-gold" />
+                    <span className="text-sm capitalize">{t(clientData.frequency as any)} - {t(clientData.serviceType as any)}</span>
+                  </div>
                 </div>
-              </div>
+              )}
               <div>
                 <p className="text-xs text-white/50 uppercase font-bold mb-1">{t('serviceValueAgreed')}</p>
                 <p className="text-3xl font-bold text-gold">${clientData.serviceValue}</p>

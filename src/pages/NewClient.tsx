@@ -75,7 +75,18 @@ export default function NewClient() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-600 mb-1">{t('clientType')}</label>
-              <select className="input" value={formData.type} onChange={e => setFormData({...formData, type: e.target.value as ClientType})}>
+              <select 
+                className="input" 
+                value={formData.type} 
+                onChange={e => {
+                  const newType = e.target.value as ClientType;
+                  setFormData({
+                    ...formData, 
+                    type: newType,
+                    frequency: newType === 'airbnb' ? 'esporadico' : formData.frequency
+                  });
+                }}
+              >
                 <option value="regular">{t('regular')}</option>
                 <option value="airbnb">{t('airbnb')}</option>
                 <option value="esporadico">{t('esporadico')}</option>

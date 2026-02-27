@@ -94,10 +94,17 @@ export default function Clients() {
             </div>
 
             <div className="mt-6 pt-4 border-t border-slate-100 flex justify-between items-center">
-              <div>
-                <p className="text-[10px] text-slate-400 uppercase font-bold">{t('frequency')}</p>
-                <p className="text-sm font-bold text-petrol capitalize">{t(client.frequency as any)}</p>
-              </div>
+              {client.type !== 'airbnb' ? (
+                <div>
+                  <p className="text-[10px] text-slate-400 uppercase font-bold">{t('frequency')}</p>
+                  <p className="text-sm font-bold text-petrol capitalize">{t(client.frequency as any)}</p>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-[10px] text-slate-400 uppercase font-bold">{t('serviceType')}</p>
+                  <p className="text-sm font-bold text-petrol capitalize">{t(client.serviceType as any)}</p>
+                </div>
+              )}
               <div className="text-right">
                 <p className="text-[10px] text-slate-400 uppercase font-bold">{t('teamPay')}</p>
                 <p className="text-sm font-bold text-gold">${client.teamPaymentValue}</p>
