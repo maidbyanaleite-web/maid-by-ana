@@ -428,11 +428,12 @@ export default function Dashboard() {
                             <div className="flex flex-col w-full">
                               <span className="text-[10px] text-slate-400 uppercase font-bold leading-none mb-1">{t('staff')}</span>
                               {isAdmin ? (
-                                <div className="relative group/select">
-                                  <div className="text-sm font-bold text-petrol cursor-pointer truncate max-w-[120px]">
-                                    {cleaning.assignedStaffNames?.join(', ') || t('selectStaff')}
+                                <div className="relative group/select" onClick={(e) => e.currentTarget.classList.toggle('is-open')}>
+                                  <div className="text-sm font-bold text-petrol cursor-pointer truncate max-w-[120px] flex items-center gap-1">
+                                    <span>{cleaning.assignedStaffNames?.join(', ') || t('selectStaff')}</span>
+                                    <ChevronRight size={14} className="transition-transform group-hover/select:rotate-90" />
                                   </div>
-                                  <div className="absolute top-full left-0 mt-1 bg-white shadow-xl rounded-xl border p-2 z-20 hidden group-hover/select:block min-w-[180px]">
+                                  <div className="absolute top-full left-0 mt-1 bg-white shadow-xl rounded-xl border p-2 z-20 hidden group-[.is-open]/select:block min-w-[180px]">
                                     {staffList.map(staff => (
                                       <label key={staff.uid} className="flex items-center gap-2 p-1 hover:bg-slate-50 rounded cursor-pointer">
                                         <input 
