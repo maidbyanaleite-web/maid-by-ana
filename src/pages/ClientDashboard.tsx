@@ -17,7 +17,9 @@ import {
   CheckCircle2,
   Plus,
   Maximize2,
-  Users
+  Users,
+  Trash2,
+  Edit
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
@@ -31,6 +33,7 @@ export default function ClientDashboard() {
   const [selectedCleaning, setSelectedCleaning] = useState<Cleaning | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [feedback, setFeedback] = useState('');
+  const [isEditingFeedback, setIsEditingFeedback] = useState(false);
   const [generalNotes, setGeneralNotes] = useState('');
   const [isEditingGeneralNotes, setIsEditingGeneralNotes] = useState(false);
 
@@ -77,7 +80,16 @@ export default function ClientDashboard() {
       clientFeedback: feedback
     });
     setFeedback('');
+    setIsEditingFeedback(false);
     setSelectedCleaning(prev => prev ? { ...prev, clientFeedback: feedback } : null);
+  };
+
+  const handleDeleteFeedback = async (cleaningId: string) => {
+    if (!window.confirm(t('deleteConfirm'))) return;
+    await db.collection('cleanings').doc(cleaningId).update({
+      clientFeedback: null
+    });
+    setSelectedCleaning(prev => prev ? { ...prev, clientFeedback: undefined } : null);
   };
 
   const handleUploadPhoto = async (cleaningId: string, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,6 +107,21 @@ export default function ClientDashboard() {
       photosByClient: nextPhotos
     });
     
+    if (selectedCleaning?.id === cleaningId) {
+      setSelectedCleaning({ ...selectedCleaning, photosByClient: nextPhotos });
+    }
+  };
+
+  const handleDeletePhoto = async (cleaningId: string, url: string) => {
+    if (!window.confirm(t('deleteConfirm'))) return;
+    const cleaning = cleanings.find(c => c.id === cleaningId);
+    if (!cleaning) return;
+
+    const nextPhotos = (cleaning.photosByClient || []).filter(photoUrl => photoUrl !== url);
+    await db.collection('cleanings').doc(cleaningId).update({
+      photosByClient: nextPhotos
+    });
+
     if (selectedCleaning?.id === cleaningId) {
       setSelectedCleaning({ ...selectedCleaning, photosByClient: nextPhotos });
     }
@@ -513,11 +540,20 @@ export default function ClientDashboard() {
                       </div>
                       <div className="flex gap-2 overflow-x-auto pb-2">
                         {selectedCleaning.photosByClient?.map((url, i) => (
-                          <img 
-                            key={i} src={url} alt="Client" 
-                            className="w-24 h-24 object-cover rounded-xl cursor-pointer hover:opacity-80 transition-opacity" 
-                            onClick={() => setSelectedPhoto(url)}
-                          />
+                          <div key={i} className="relative group shrink-0">
+                            <img 
+                              src={url} 
+                              alt="Client" 
+                              className="w-24 h-24 object-cover rounded-xl cursor-pointer hover:opacity-80 transition-opacity" 
+                              onClick={() => setSelectedPhoto(url)}
+                            />
+                            <button 
+                              onClick={() => handleDeletePhoto(selectedCleaning.id!, url)}
+                              className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
                         ))}
                         {(!selectedCleaning.photosByClient || selectedCleaning.photosByClient.length === 0) && (
                           <div className="w-24 h-24 rounded-xl bg-slate-50 border border-dashed border-slate-200 flex items-center justify-center text-slate-300 text-[10px]">No photos</div>
@@ -535,9 +571,26 @@ export default function ClientDashboard() {
                   </h3>
 
                   <div className="space-y-4">
-                    {selectedCleaning.clientFeedback ? (
-                      <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
+                    {selectedCleaning.clientFeedback && !isEditingFeedback ? (
+                      <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100 relative group">
                         <p className="text-sm text-blue-900 leading-relaxed">{selectedCleaning.clientFeedback}</p>
+                        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button 
+                            onClick={() => {
+                              setFeedback(selectedCleaning.clientFeedback!);
+                              setIsEditingFeedback(true);
+                            }}
+                            className="p-1 hover:bg-blue-100 rounded text-blue-600"
+                          >
+                            <Edit size={14} />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteFeedback(selectedCleaning.id!)}
+                            className="p-1 hover:bg-red-100 rounded text-red-500"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -547,12 +600,25 @@ export default function ClientDashboard() {
                           value={feedback}
                           onChange={(e) => setFeedback(e.target.value)}
                         />
-                        <button 
-                          onClick={() => handleAddFeedback(selectedCleaning.id!)}
-                          className="w-full btn-primary py-3"
-                        >
-                          {t('save')}
-                        </button>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => handleAddFeedback(selectedCleaning.id!)}
+                            className="flex-1 btn-primary py-3"
+                          >
+                            {t('save')}
+                          </button>
+                          {isEditingFeedback && (
+                            <button 
+                              onClick={() => {
+                                setIsEditingFeedback(false);
+                                setFeedback('');
+                              }}
+                              className="flex-1 bg-slate-100 text-slate-600 rounded-xl py-3 font-bold hover:bg-slate-200 transition-all"
+                            >
+                              {t('cancel')}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>

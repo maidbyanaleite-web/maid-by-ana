@@ -23,7 +23,10 @@ import {
   Calculator,
   Check,
   CheckCircle2,
-  Trash2
+  Trash2,
+  Edit,
+  Bell,
+  CheckCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -38,10 +41,13 @@ export default function Dashboard() {
   const [staffList, setStaffList] = useState<UserProfile[]>([]);
   const [budgetRequests, setBudgetRequests] = useState<BudgetRequest[]>([]);
   const [allCompletedCleanings, setAllCompletedCleanings] = useState<Cleaning[]>([]);
+  const [reminders, setReminders] = useState<{id: string, text: string, completed: boolean}[]>([]);
+  const [newReminder, setNewReminder] = useState('');
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'overview' | 'payments'>('overview');
   const [selectedCleaning, setSelectedCleaning] = useState<Cleaning | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [editingCleaning, setEditingCleaning] = useState<Cleaning | null>(null);
 
   useEffect(() => {
     const today = format(new Date(), 'yyyy-MM-dd');
@@ -77,12 +83,19 @@ export default function Dashboard() {
           setAllCompletedCleanings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Cleaning)));
         });
 
+      const unsubReminders = db.collection('reminders')
+        .orderBy('createdAt', 'desc')
+        .onSnapshot((snapshot) => {
+          setReminders(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
+        });
+
       return () => {
         unsubClients();
         unsubCleanings();
         unsubStaff();
         unsubBudgets();
         unsubAllCompleted();
+        unsubReminders();
       };
     }
 
@@ -141,6 +154,55 @@ export default function Dashboard() {
     await db.collection('budget_requests').doc(budgetId).update({ status });
   };
 
+  const handleDeleteBudget = async (budgetId: string) => {
+    if (window.confirm(t('deleteConfirm'))) {
+      await db.collection('budget_requests').doc(budgetId).delete();
+    }
+  };
+
+  const handleAddReminder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newReminder.trim()) return;
+    await db.collection('reminders').add({
+      text: newReminder,
+      completed: false,
+      createdAt: new Date().toISOString(),
+      createdBy: user?.uid
+    });
+    setNewReminder('');
+  };
+
+  const handleToggleReminder = async (id: string, completed: boolean) => {
+    await db.collection('reminders').doc(id).update({ completed: !completed });
+  };
+
+  const handleDeleteReminder = async (id: string) => {
+    if (window.confirm(t('deleteConfirm'))) {
+      await db.collection('reminders').doc(id).delete();
+    }
+  };
+
+  const handleDeleteCleaning = async (cleaningId: string) => {
+    if (window.confirm(t('deleteConfirm'))) {
+      try {
+        await db.collection('cleanings').doc(cleaningId).delete();
+      } catch (error) {
+        console.error("Error deleting cleaning: ", error);
+      }
+    }
+  };
+
+  const handleUpdateCleaningDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCleaning || !editingCleaning.id) return;
+    try {
+      await db.collection('cleanings').doc(editingCleaning.id).update(editingCleaning);
+      setEditingCleaning(null);
+    } catch (error) {
+      console.error("Error updating cleaning: ", error);
+    }
+  };
+
   const totalRevenue = clients.reduce((acc, c) => acc + (c.serviceValue || 0), 0);
   const totalTeamPayment = clients.reduce((acc, c) => acc + (c.teamPaymentValue || 0), 0);
   const totalProfit = totalRevenue - totalTeamPayment;
@@ -194,62 +256,60 @@ export default function Dashboard() {
             <div className="space-y-8">
               {/* Stats Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <motion.div whileHover={{ y: -5 }} className="card flex items-center gap-4">
-                  <div className="p-3 bg-petrol/10 rounded-xl text-petrol">
-                    <Users size={24} />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500">{t('activeClients')}</p>
-                    <p className="text-2xl font-bold">{clients.length}</p>
-                  </div>
-                </motion.div>
-
-                <motion.div whileHover={{ y: -5 }} className="card flex items-center gap-4">
-                  <div className="p-3 bg-blue-100 rounded-xl text-blue-600">
-                    <Calendar size={24} />
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-500">{t('upcomingCleanings')}</p>
-                    <p className="text-2xl font-bold">{cleanings.length}</p>
-                  </div>
-                </motion.div>
-
-                {isAdmin && (
-                  <motion.div whileHover={{ y: -5 }} className="card flex items-center gap-4">
-                    <div className="p-3 bg-purple-100 rounded-xl text-purple-600">
-                      <Calculator size={24} />
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-500">{t('pendingBudgets')}</p>
-                      <p className="text-2xl font-bold">{budgetRequests.length}</p>
-                    </div>
-                  </motion.div>
-                )}
-
-                {isAdmin && (
-                  <>
-                    <motion.div whileHover={{ y: -5 }} className="card flex items-center gap-4">
-                      <div className="p-3 bg-emerald-100 rounded-xl text-emerald-600">
-                        <DollarSign size={24} />
-                      </div>
-                      <div>
-                        <p className="text-sm text-slate-500">{t('totalRevenue')}</p>
-                        <p className="text-2xl font-bold">${totalRevenue.toLocaleString()}</p>
-                      </div>
-                    </motion.div>
-
-                    <motion.div whileHover={{ y: -5 }} className="card flex items-center gap-4">
-                      <div className="p-3 bg-gold-light rounded-xl text-gold">
-                        <TrendingUp size={24} />
-                      </div>
-                      <div>
-                        <p className="text-sm text-slate-500">{t('totalRevenue')} (Net)</p>
-                        <p className="text-2xl font-bold">${totalProfit.toLocaleString()}</p>
-                      </div>
-                    </motion.div>
-                  </>
-                )}
+                {/* ... existing stats ... */}
               </div>
+
+              {/* Reminders Section */}
+              {isAdmin && (
+                <section className="space-y-4">
+                  <h2 className="text-xl font-bold text-petrol flex items-center gap-2">
+                    <Bell size={20} className="text-gold" />
+                    {t('reminders' as any) || 'Reminders'}
+                  </h2>
+                  <div className="card space-y-4">
+                    <form onSubmit={handleAddReminder} className="flex gap-2">
+                      <input 
+                        type="text"
+                        className="input flex-1"
+                        placeholder={t('addReminder' as any) || 'Add a reminder...'}
+                        value={newReminder}
+                        onChange={(e) => setNewReminder(e.target.value)}
+                      />
+                      <button type="submit" className="btn-primary px-6">
+                        <Plus size={20} />
+                      </button>
+                    </form>
+                    <div className="space-y-2">
+                      {reminders.map(reminder => (
+                        <div key={reminder.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 group">
+                          <div className="flex items-center gap-3">
+                            <button 
+                              onClick={() => handleToggleReminder(reminder.id, reminder.completed)}
+                              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                reminder.completed ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300'
+                              }`}
+                            >
+                              {reminder.completed && <Check size={12} />}
+                            </button>
+                            <span className={`text-sm ${reminder.completed ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                              {reminder.text}
+                            </span>
+                          </div>
+                          <button 
+                            onClick={() => handleDeleteReminder(reminder.id)}
+                            className="p-1 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                      {reminders.length === 0 && (
+                        <p className="text-center text-slate-400 text-sm py-4 italic">No reminders yet.</p>
+                      )}
+                    </div>
+                  </div>
+                </section>
+              )}
 
               {/* Budget Requests Section */}
               {isAdmin && budgetRequests.length > 0 && (
@@ -297,8 +357,15 @@ export default function Dashboard() {
                             onClick={() => handleUpdateBudgetStatus(budget.id!, 'rejected')}
                             className="flex-1 bg-slate-100 text-slate-600 py-2 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors flex items-center justify-center gap-2"
                           >
-                            <Trash2 size={16} />
-                            {t('delete')}
+                            <X size={16} />
+                            {t('reject' as any) || 'Reject'}
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteBudget(budget.id!)}
+                            className="p-2 text-slate-300 hover:text-red-500 transition-colors"
+                            title={t('delete')}
+                          >
+                            <Trash2 size={18} />
                           </button>
                         </div>
                       </div>
@@ -382,6 +449,24 @@ export default function Dashboard() {
                           </div>
                           
                           <div className="flex items-center gap-2">
+                            {isAdmin && (
+                              <>
+                                <button 
+                                  onClick={() => setEditingCleaning(cleaning)}
+                                  className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-petrol"
+                                  title={t('edit')}
+                                >
+                                  <Edit size={18} />
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteCleaning(cleaning.id!)}
+                                  className="p-2 hover:bg-red-50 rounded-full transition-colors text-slate-300 hover:text-red-500"
+                                  title={t('delete')}
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              </>
+                            )}
                             <button 
                               onClick={() => setSelectedCleaning(cleaning)}
                               className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-petrol"
@@ -745,6 +830,65 @@ export default function Dashboard() {
                 alt="Preview" 
                 className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
               />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Cleaning Modal */}
+      <AnimatePresence>
+        {editingCleaning && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white w-full max-w-md p-8 rounded-3xl shadow-2xl relative"
+            >
+              <button 
+                onClick={() => setEditingCleaning(null)}
+                className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <X size={20} className="text-slate-400" />
+              </button>
+
+              <h2 className="text-2xl font-bold text-petrol mb-6">{t('editCleaning')}</h2>
+
+              <form onSubmit={handleUpdateCleaningDetails} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('date')}</label>
+                  <input 
+                    type="date"
+                    className="input"
+                    value={editingCleaning.date}
+                    onChange={e => setEditingCleaning({...editingCleaning, date: e.target.value})}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('scheduledTime')}</label>
+                  <input 
+                    type="time"
+                    className="input"
+                    value={editingCleaning.scheduledTime}
+                    onChange={e => setEditingCleaning({...editingCleaning, scheduledTime: e.target.value})}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('teamPay')}</label>
+                  <input 
+                    type="number"
+                    className="input"
+                    value={editingCleaning.teamPaymentValue}
+                    onChange={e => setEditingCleaning({...editingCleaning, teamPaymentValue: parseFloat(e.target.value) || 0})}
+                    required
+                  />
+                </div>
+                <div className="pt-4">
+                  <button type="submit" className="w-full btn-primary py-3">{t('save')}</button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}

@@ -18,7 +18,8 @@ import {
   Image as ImageIcon,
   ExternalLink,
   List,
-  DollarSign
+  DollarSign,
+  Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
@@ -90,6 +91,24 @@ export default function StaffDashboard() {
 
     await db.collection('cleanings').doc(cleaningId).update({
       [field]: [...((cleaning[field] as string[]) || []), url]
+    });
+  };
+
+  const handleDeletePhoto = async (cleaningId: string, type: 'before' | 'after' | 'extra', url: string) => {
+    if (!window.confirm(t('deleteConfirm'))) return;
+    
+    const cleaning = assignedCleanings.find(c => c.id === cleaningId);
+    if (!cleaning) return;
+
+    let field: keyof Cleaning;
+    if (type === 'before') field = 'photosBefore';
+    else if (type === 'after') field = 'photosAfter';
+    else field = 'extraPhotos';
+
+    const nextPhotos = ((cleaning[field] as string[]) || []).filter(photoUrl => photoUrl !== url);
+
+    await db.collection('cleanings').doc(cleaningId).update({
+      [field]: nextPhotos
     });
   };
 
@@ -344,12 +363,20 @@ export default function StaffDashboard() {
                     {cleaning.photosBefore?.map((url, i) => (
                       <div key={i} className="relative group shrink-0">
                         <img src={url} alt="Before" className="w-24 h-24 object-cover rounded-2xl border border-slate-100 shadow-sm" />
-                        <button 
-                          onClick={() => setSelectedPhoto(url)}
-                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center text-white"
-                        >
-                          <Maximize2 size={20} />
-                        </button>
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center gap-2">
+                          <button 
+                            onClick={() => setSelectedPhoto(url)}
+                            className="p-1 hover:bg-white/20 rounded-full text-white"
+                          >
+                            <Maximize2 size={18} />
+                          </button>
+                          <button 
+                            onClick={() => handleDeletePhoto(cleaning.id!, 'before', url)}
+                            className="p-1 hover:bg-red-500/20 rounded-full text-red-500"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
                       </div>
                     ))}
                     {(!cleaning.photosBefore || cleaning.photosBefore.length === 0) && (
@@ -376,12 +403,20 @@ export default function StaffDashboard() {
                     {cleaning.photosAfter?.map((url, i) => (
                       <div key={i} className="relative group shrink-0">
                         <img src={url} alt="After" className="w-24 h-24 object-cover rounded-2xl border border-slate-100 shadow-sm" />
-                        <button 
-                          onClick={() => setSelectedPhoto(url)}
-                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center text-white"
-                        >
-                          <Maximize2 size={20} />
-                        </button>
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center gap-2">
+                          <button 
+                            onClick={() => setSelectedPhoto(url)}
+                            className="p-1 hover:bg-white/20 rounded-full text-white"
+                          >
+                            <Maximize2 size={18} />
+                          </button>
+                          <button 
+                            onClick={() => handleDeletePhoto(cleaning.id!, 'after', url)}
+                            className="p-1 hover:bg-red-500/20 rounded-full text-red-500"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
                       </div>
                     ))}
                     {(!cleaning.photosAfter || cleaning.photosAfter.length === 0) && (
@@ -408,12 +443,20 @@ export default function StaffDashboard() {
                     {cleaning.extraPhotos?.map((url, i) => (
                       <div key={i} className="relative group shrink-0">
                         <img src={url} alt="Extra" className="w-24 h-24 object-cover rounded-2xl border border-slate-100 shadow-sm" />
-                        <button 
-                          onClick={() => setSelectedPhoto(url)}
-                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center text-white"
-                        >
-                          <Maximize2 size={20} />
-                        </button>
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center gap-2">
+                          <button 
+                            onClick={() => setSelectedPhoto(url)}
+                            className="p-1 hover:bg-white/20 rounded-full text-white"
+                          >
+                            <Maximize2 size={18} />
+                          </button>
+                          <button 
+                            onClick={() => handleDeletePhoto(cleaning.id!, 'extra', url)}
+                            className="p-1 hover:bg-red-500/20 rounded-full text-red-500"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
                       </div>
                     ))}
                     {(!cleaning.extraPhotos || cleaning.extraPhotos.length === 0) && (

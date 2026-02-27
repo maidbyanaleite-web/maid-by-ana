@@ -160,7 +160,14 @@ export const translations = {
     combinedCleanings: 'Combined Cleanings',
     finalizedCleanings: 'Finalized Cleanings',
     pending: 'Pending',
-    paid: 'Paid'
+    paid: 'Paid',
+    edit: 'Edit',
+    updateInfo: 'Update account information',
+    deleteConfirm: 'Are you sure you want to delete this?',
+    cleaningDetails: 'Cleaning Details',
+    date: 'Date',
+    time: 'Time',
+    editCleaning: 'Edit Cleaning'
   },
   pt: {
     appName: 'Maid By Ana',
@@ -321,6 +328,13 @@ export const translations = {
     combinedCleanings: 'Limpezas Combinadas',
     finalizedCleanings: 'Limpezas Finalizadas',
     pending: 'Pendente',
-    paid: 'Pago'
+    paid: 'Pago',
+    edit: 'Editar',
+    updateInfo: 'Atualizar informações da conta',
+    deleteConfirm: 'Tem certeza que deseja excluir este item?',
+    cleaningDetails: 'Detalhes da Limpeza',
+    date: 'Data',
+    time: 'Hora',
+    editCleaning: 'Editar Limpeza'
   }
 };

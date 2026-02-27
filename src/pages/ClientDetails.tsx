@@ -44,6 +44,10 @@ export default function ClientDetails() {
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editFormData, setEditFormData] = useState<Client | null>(null);
+  const [editingCleaning, setEditingCleaning] = useState<Cleaning | null>(null);
+  const [isAddingCleaning, setIsAddingCleaning] = useState(false);
+  const [newCleaningDate, setNewCleaningDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [newCleaningTime, setNewCleaningTime] = useState('09:00');
 
   useEffect(() => {
     if (!id) return;
@@ -217,6 +221,77 @@ export default function ClientDetails() {
     }
   };
 
+  const handleDeleteClient = async () => {
+    if (!id) return;
+    if (window.confirm(t('deleteConfirm'))) {
+      try {
+        await db.collection('clients').doc(id).delete();
+        navigate('/clients');
+      } catch (error) {
+        console.error("Error deleting client: ", error);
+      }
+    }
+  };
+
+  const handleDeleteCleaning = async (cleaningId: string) => {
+    if (window.confirm(t('deleteConfirm'))) {
+      try {
+        await db.collection('cleanings').doc(cleaningId).delete();
+      } catch (error) {
+        console.error("Error deleting cleaning: ", error);
+      }
+    }
+  };
+
+  const handleUpdateCleaningDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCleaning || !editingCleaning.id) return;
+    try {
+      await db.collection('cleanings').doc(editingCleaning.id).update(editingCleaning);
+      setEditingCleaning(null);
+    } catch (error) {
+      console.error("Error updating cleaning: ", error);
+    }
+  };
+
+  const handleAddCleaning = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!client) return;
+
+    try {
+      await db.collection('cleanings').add({
+        clientId: id,
+        clientName: client.name,
+        clientAddress: client.address,
+        clientType: client.type,
+        date: newCleaningDate,
+        scheduledTime: newCleaningTime,
+        assignedStaffIds: client.assignedStaffIds || [],
+        assignedStaffNames: [], // Will be populated by the system if needed
+        serviceValue: client.serviceValue,
+        teamPaymentValue: client.teamPaymentValue,
+        status: 'scheduled',
+        createdAt: new Date().toISOString()
+      });
+      setIsAddingCleaning(false);
+    } catch (error) {
+      console.error("Error adding cleaning: ", error);
+    }
+  };
+
+  const handleDeletePhoto = async (url: string) => {
+    if (!id || !client) return;
+    if (window.confirm(t('deleteConfirm'))) {
+      try {
+        const nextGallery = (client.gallery || []).filter(photoUrl => photoUrl !== url);
+        await db.collection('clients').doc(id).update({ gallery: nextGallery });
+        // Optionally delete from storage too, but for simplicity we just remove from firestore
+      } catch (error) {
+        console.error("Error deleting photo: ", error);
+      }
+    }
+  };
+
   if (loading) return <div className="p-8 text-center">{t('processing')}</div>;
   if (!client) return <div className="p-8 text-center">Client not found.</div>;
 
@@ -253,7 +328,10 @@ export default function ClientDetails() {
                   >
                     <Edit size={20} />
                   </button>
-                  <button className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors">
+                  <button 
+                    onClick={handleDeleteClient}
+                    className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                  >
                     <Trash2 size={20} />
                   </button>
                 </div>
@@ -312,10 +390,25 @@ export default function ClientDetails() {
                 <Clock size={20} />
                 {t('cleaningHistory' as any)}
               </h2>
+              {isAdmin && (
+                <button 
+                  onClick={() => setIsAddingCleaning(true)}
+                  className="btn-primary py-2 px-4 text-sm flex items-center gap-2"
+                >
+                  <Plus size={16} />
+                  {t('scheduleCleaning' as any) || 'Schedule Cleaning'}
+                </button>
+              )}
             </div>
             <div className="space-y-4">
               {clientCleanings.map(cleaning => (
-                <CleaningCard cleaning={cleaning} isAdmin={isAdmin || false} />
+                <CleaningCard 
+                  key={cleaning.id} 
+                  cleaning={cleaning} 
+                  isAdmin={isAdmin || false} 
+                  onEdit={setEditingCleaning}
+                  onDelete={handleDeleteCleaning}
+                />
               ))}
               {clientCleanings.length === 0 && (
                 <div className="col-span-full py-12 text-center text-slate-400 border-2 border-dashed border-slate-100 rounded-2xl">
@@ -397,6 +490,40 @@ export default function ClientDetails() {
                     </div>
                   </label>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {isAdmin && (
+            <div className="card space-y-4">
+              <h3 className="font-bold text-petrol mb-2 flex items-center gap-2">
+                <ImageIcon size={18} />
+                {t('gallery')}
+              </h3>
+              <div className="grid grid-cols-3 gap-2">
+                {client.gallery?.map((url, i) => (
+                  <div key={i} className="relative group">
+                    <img 
+                      src={url} 
+                      alt="Gallery" 
+                      className="w-full h-24 object-cover rounded-xl cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => setSelectedPhoto(url)}
+                    />
+                    {isAdmin && (
+                      <button 
+                        onClick={() => handleDeletePhoto(url)}
+                        className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <label className="w-full h-24 rounded-xl bg-slate-50 border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 cursor-pointer hover:bg-slate-100 transition-colors">
+                  <Plus size={24} />
+                  <span className="text-[10px] font-bold uppercase">{t('uploadPhoto')}</span>
+                  <input type="file" className="hidden" onChange={handleUploadImage} accept="image/*" />
+                </label>
               </div>
             </div>
           )}
@@ -769,6 +896,116 @@ export default function ClientDetails() {
                 <button onClick={() => setIsEditModalOpen(false)} className="btn-secondary">{t('cancel')}</button>
                 <button onClick={handleUpdateClient} className="btn-primary">{t('save')}</button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Cleaning Modal */}
+      <AnimatePresence>
+        {editingCleaning && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white w-full max-w-md p-8 rounded-3xl shadow-2xl relative"
+            >
+              <button 
+                onClick={() => setEditingCleaning(null)}
+                className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <X size={20} className="text-slate-400" />
+              </button>
+
+              <h2 className="text-2xl font-bold text-petrol mb-6">{t('editCleaning')}</h2>
+
+              <form onSubmit={handleUpdateCleaningDetails} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('date')}</label>
+                  <input 
+                    type="date"
+                    className="input"
+                    value={editingCleaning.date}
+                    onChange={e => setEditingCleaning({...editingCleaning, date: e.target.value})}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('scheduledTime')}</label>
+                  <input 
+                    type="time"
+                    className="input"
+                    value={editingCleaning.scheduledTime}
+                    onChange={e => setEditingCleaning({...editingCleaning, scheduledTime: e.target.value})}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('teamPay')}</label>
+                  <input 
+                    type="number"
+                    className="input"
+                    value={editingCleaning.teamPaymentValue}
+                    onChange={e => setEditingCleaning({...editingCleaning, teamPaymentValue: parseFloat(e.target.value) || 0})}
+                    required
+                  />
+                </div>
+                <div className="pt-4">
+                  <button type="submit" className="w-full btn-primary py-3">{t('save')}</button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Add Cleaning Modal */}
+      <AnimatePresence>
+        {isAddingCleaning && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white w-full max-w-md p-8 rounded-3xl shadow-2xl relative"
+            >
+              <button 
+                onClick={() => setIsAddingCleaning(false)}
+                className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <X size={20} className="text-slate-400" />
+              </button>
+
+              <h2 className="text-2xl font-bold text-petrol mb-6">{t('scheduleCleaning' as any) || 'Schedule Cleaning'}</h2>
+
+              <form onSubmit={handleAddCleaning} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('date')}</label>
+                  <input 
+                    type="date"
+                    required
+                    className="input"
+                    value={newCleaningDate}
+                    onChange={(e) => setNewCleaningDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('time')}</label>
+                  <input 
+                    type="time"
+                    required
+                    className="input"
+                    value={newCleaningTime}
+                    onChange={(e) => setNewCleaningTime(e.target.value)}
+                  />
+                </div>
+                <div className="pt-4">
+                  <button type="submit" className="w-full btn-primary py-3">
+                    {t('save')}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}

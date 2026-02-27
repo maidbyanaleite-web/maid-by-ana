@@ -8,21 +8,26 @@ import {
   MessageSquare,
   Camera,
   User,
-  Save
+  Save,
+  Edit,
+  Trash2
 } from 'lucide-react';
 
 interface CleaningCardProps {
   cleaning: Cleaning;
   isAdmin: boolean;
+  onEdit?: (cleaning: Cleaning) => void;
+  onDelete?: (cleaningId: string) => void;
 }
 
-export default function CleaningCard({ cleaning, isAdmin }: CleaningCardProps) {
+export default function CleaningCard({ cleaning, isAdmin, onEdit, onDelete }: CleaningCardProps) {
   const { t } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [adminNotes, setAdminNotes] = useState(cleaning.adminNotes || '');
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleSaveAdminNotes = async () => {
+  const handleSaveAdminNotes = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!cleaning.id) return;
     setIsSaving(true);
     try {
@@ -53,11 +58,35 @@ export default function CleaningCard({ cleaning, isAdmin }: CleaningCardProps) {
         className="w-full p-4 text-left flex justify-between items-center hover:bg-slate-50 transition-colors"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <div>
-          <p className="font-bold text-petrol">{cleaning.date}</p>
-          <p className={`text-xs font-bold uppercase ${cleaning.status === 'completed' ? 'text-emerald-500' : 'text-gold'}`}>
-            {t(cleaning.status)}
-          </p>
+        <div className="flex items-center gap-4">
+          <div>
+            <p className="font-bold text-petrol">{cleaning.date}</p>
+            <p className={`text-xs font-bold uppercase ${cleaning.status === 'completed' ? 'text-emerald-500' : 'text-gold'}`}>
+              {t(cleaning.status)}
+            </p>
+          </div>
+          {isAdmin && (
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit?.(cleaning);
+                }}
+                className="p-2 hover:bg-slate-200 rounded-lg transition-colors text-slate-400 hover:text-petrol"
+              >
+                <Edit size={16} />
+              </button>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete?.(cleaning.id!);
+                }}
+                className="p-2 hover:bg-red-50 rounded-lg transition-colors text-slate-300 hover:text-red-500"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          )}
         </div>
         {isOpen ? <ChevronUp className="text-slate-400" /> : <ChevronDown className="text-slate-400" />}
       </button>

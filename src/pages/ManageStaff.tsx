@@ -13,7 +13,9 @@ import {
   Plus,
   X,
   Lock,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Edit,
+  Save
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
@@ -37,6 +39,7 @@ export default function ManageStaff() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   
   // Form state
   const [newName, setNewName] = useState('');
@@ -110,6 +113,45 @@ export default function ManageStaff() {
     } finally {
       setFormLoading(false);
     }
+  };
+
+  const handleUpdateStaff = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    setFormLoading(true);
+    setFormError('');
+
+    try {
+      const userData: any = {
+        name: newName,
+        role: newRole
+      };
+
+      if (newRole === 'client' && selectedClientId) {
+        userData.clientId = selectedClientId;
+      } else {
+        userData.clientId = null;
+      }
+
+      await db.collection('users').doc(editingUser.uid).update(userData);
+      setEditingUser(null);
+      setNewName('');
+      setNewRole('staff');
+      setSelectedClientId('');
+    } catch (err: any) {
+      console.error(err);
+      setFormError(err.message || 'Error updating user');
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const openEditModal = (user: UserProfile) => {
+    setEditingUser(user);
+    setNewName(user.name);
+    setNewRole(user.role);
+    setSelectedClientId(user.clientId || '');
+    setShowAddModal(false);
   };
 
   const handleDelete = async (uid: string) => {
@@ -192,6 +234,14 @@ export default function ManageStaff() {
             </div>
 
             <div className="flex items-center gap-4">
+              <button 
+                onClick={() => openEditModal(member)}
+                className="p-2 text-slate-400 hover:text-petrol transition-colors"
+                title={t('edit')}
+              >
+                <Edit size={20} />
+              </button>
+              
               <div className="text-right px-4">
                 <p className="text-xs text-slate-400 uppercase tracking-wider">{t('role')}</p>
                 <button 
@@ -217,9 +267,9 @@ export default function ManageStaff() {
         ))}
       </div>
 
-      {/* Add User Modal */}
+      {/* Add/Edit User Modal */}
       <AnimatePresence>
-        {showAddModal && (
+        {(showAddModal || editingUser) && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
@@ -228,7 +278,10 @@ export default function ManageStaff() {
               className="bg-white w-full max-w-md p-8 rounded-3xl shadow-2xl relative"
             >
               <button 
-                onClick={() => setShowAddModal(false)}
+                onClick={() => {
+                  setShowAddModal(false);
+                  setEditingUser(null);
+                }}
                 className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-full transition-colors"
               >
                 <X size={20} className="text-slate-400" />
@@ -238,11 +291,11 @@ export default function ManageStaff() {
                 <div className="w-16 h-16 bg-petrol/10 rounded-2xl flex items-center justify-center text-petrol mx-auto mb-4">
                   <Users size={32} />
                 </div>
-                <h2 className="text-2xl font-bold text-petrol">{t('addStaff')}</h2>
-                <p className="text-slate-500">{t('createAccount')}</p>
+                <h2 className="text-2xl font-bold text-petrol">{editingUser ? t('edit') : t('addStaff')}</h2>
+                <p className="text-slate-500">{editingUser ? t('updateInfo') : t('createAccount')}</p>
               </div>
 
-              <form onSubmit={handleAddStaff} className="space-y-6">
+              <form onSubmit={editingUser ? handleUpdateStaff : handleAddStaff} className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">{t('fullName')}</label>
                   <div className="relative">
@@ -263,28 +316,31 @@ export default function ManageStaff() {
                     <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type="email"
-                      className="input pl-10"
-                      value={newEmail}
+                      className="input pl-10 disabled:bg-slate-50 disabled:text-slate-400"
+                      value={editingUser ? editingUser.email : newEmail}
                       onChange={(e) => setNewEmail(e.target.value)}
                       required
+                      disabled={!!editingUser}
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('password')}</label>
-                  <div className="relative">
-                    <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="password"
-                      className="input pl-10"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      required
-                      minLength={6}
-                    />
+                {!editingUser && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{t('password')}</label>
+                    <div className="relative">
+                      <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="password"
+                        className="input pl-10"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        required
+                        minLength={6}
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -328,8 +384,8 @@ export default function ManageStaff() {
                 >
                   {formLoading ? t('processing') : (
                     <>
-                      <Plus size={20} />
-                      {t('register')}
+                      {editingUser ? <Save size={20} /> : <Plus size={20} />}
+                      {editingUser ? t('save') : t('register')}
                     </>
                   )}
                 </button>
