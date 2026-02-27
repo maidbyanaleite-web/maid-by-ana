@@ -48,6 +48,9 @@ export default function Dashboard() {
   const [selectedCleaning, setSelectedCleaning] = useState<Cleaning | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [editingCleaning, setEditingCleaning] = useState<Cleaning | null>(null);
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+  const [currentCleaningId, setCurrentCleaningId] = useState<string | null>(null);
+  const [newNote, setNewNote] = useState('');
 
   useEffect(() => {
     const today = format(new Date(), 'yyyy-MM-dd');
@@ -179,6 +182,20 @@ export default function Dashboard() {
   const handleDeleteReminder = async (id: string) => {
     if (window.confirm(t('deleteConfirm'))) {
       await db.collection('reminders').doc(id).delete();
+    }
+  };
+
+  const handleAddNoteToCleaning = async () => {
+    if (!currentCleaningId || !newNote.trim()) return;
+    try {
+      await db.collection('cleanings').doc(currentCleaningId).update({
+        notes: newNote
+      });
+      setNewNote('');
+      setCurrentCleaningId(null);
+      setIsNoteModalOpen(false);
+    } catch (error) {
+      console.error("Error adding note to cleaning: ", error);
     }
   };
 
@@ -451,6 +468,17 @@ export default function Dashboard() {
                           <div className="flex items-center gap-2">
                             {isAdmin && (
                               <>
+                                <button 
+                                  onClick={() => {
+                                    setCurrentCleaningId(cleaning.id!);
+                                    setNewNote(cleaning.notes || '');
+                                    setIsNoteModalOpen(true);
+                                  }}
+                                  className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-petrol"
+                                  title={t('addNote' as any)}
+                                >
+                                  <MessageSquare size={18} />
+                                </button>
                                 <button 
                                   onClick={() => setEditingCleaning(cleaning)}
                                   className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-petrol"
@@ -741,6 +769,13 @@ export default function Dashboard() {
                       <p className="text-sm text-blue-900 leading-relaxed">{selectedCleaning.clientFeedback}</p>
                     </div>
                   )}
+
+                  {selectedCleaning.adminNotes && (
+                    <div className="bg-red-50/50 p-5 rounded-2xl border border-red-100">
+                      <p className="text-[10px] font-bold text-red-600 uppercase tracking-wider mb-2">{t('adminNotes' as any)}</p>
+                      <p className="text-sm text-red-900 leading-relaxed">{selectedCleaning.adminNotes}</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Photos Section */}
@@ -834,6 +869,29 @@ export default function Dashboard() {
           </div>
         )}
       </AnimatePresence>
+
+      {isNoteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-white w-full max-w-md p-6 rounded-2xl shadow-xl"
+          >
+            <h3 className="text-lg font-bold text-petrol mb-4">{t('addNote' as any)}</h3>
+            <textarea
+              className="input w-full min-h-[120px] mb-4"
+              value={newNote}
+              onChange={(e) => setNewNote(e.target.value)}
+              placeholder={t('enterNotePlaceholder' as any)}
+            />
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setIsNoteModalOpen(false)} className="btn-secondary">{t('cancel')}</button>
+              <button onClick={handleAddNoteToCleaning} className="btn-primary">{t('save')}</button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Edit Cleaning Modal */}
       <AnimatePresence>
