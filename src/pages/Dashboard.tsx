@@ -508,6 +508,12 @@ export default function Dashboard() {
                           <p className="text-sm font-bold text-petrol">{selectedCleaning.startTime}</p>
                         </div>
                       )}
+                      {selectedCleaning.endTime && (
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-bold">{t('endTime')}</p>
+                          <p className="text-sm font-bold text-petrol">{selectedCleaning.endTime}</p>
+                        </div>
+                      )}
                       <div>
                         <p className="text-[10px] text-slate-400 uppercase font-bold">{t('staff')}</p>
                         <p className="text-sm font-bold text-petrol">{selectedCleaning.assignedStaffNames?.join(', ') || '---'}</p>

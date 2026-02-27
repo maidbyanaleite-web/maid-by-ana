@@ -107,6 +107,10 @@ export default function StaffDashboard() {
     if (nextStatus === 'in_progress' && !assignedCleanings.find(c => c.id === cleaningId)?.startTime) {
       updateData.startTime = format(new Date(), 'HH:mm');
     }
+
+    if (nextStatus === 'completed') {
+      updateData.endTime = format(new Date(), 'HH:mm');
+    }
     
     await db.collection('cleanings').doc(cleaningId).update(updateData);
   };
@@ -216,15 +220,19 @@ export default function StaffDashboard() {
                 <div className="flex flex-col items-end gap-2">
                   <button 
                     onClick={() => toggleStatus(cleaning.id!, cleaning.status)}
+                    disabled={cleaning.status === 'completed'}
                     className={`p-3 rounded-2xl transition-all flex items-center gap-2 font-bold text-sm ${
-                      cleaning.status === 'completed' ? 'text-emerald-500 bg-emerald-50' : 
-                      cleaning.status === 'in_progress' ? 'text-blue-500 bg-blue-50' :
-                      cleaning.status === 'on_the_way' ? 'text-gold bg-gold/10' :
-                      'text-slate-300 bg-slate-50 hover:bg-slate-100'
+                      cleaning.status === 'completed' ? 'text-emerald-500 bg-emerald-50 cursor-default' : 
+                      cleaning.status === 'in_progress' ? 'text-blue-500 bg-blue-50 hover:bg-blue-100' :
+                      cleaning.status === 'on_the_way' ? 'text-gold bg-gold/10 hover:bg-gold/20' :
+                      'text-slate-500 bg-slate-100 hover:bg-slate-200'
                     }`}
                   >
                     <CheckCircle size={24} />
-                    {t(cleaning.status)}
+                    {cleaning.status === 'scheduled' ? t('on_the_way') : 
+                     cleaning.status === 'on_the_way' ? t('in_progress') :
+                     cleaning.status === 'in_progress' ? t('completed') :
+                     t('completed')}
                   </button>
                   {cleaning.status === 'on_the_way' && (
                     <div className="flex items-center gap-2">
@@ -251,6 +259,12 @@ export default function StaffDashboard() {
                     <span className={`w-2 h-2 rounded-full ${cleaning.status === 'completed' ? 'bg-emerald-500' : 'bg-gold animate-pulse'}`} />
                     {t(cleaning.status)}
                   </p>
+                  {(cleaning.startTime || cleaning.endTime) && (
+                    <div className="text-[10px] text-slate-500 font-medium">
+                      {cleaning.startTime && <span>{t('startTime')}: {cleaning.startTime}</span>}
+                      {cleaning.endTime && <span className="ml-2">| {t('endTime')}: {cleaning.endTime}</span>}
+                    </div>
+                  )}
                 </div>
                 <div className="col-span-2 space-y-1">
                   <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{t('clientType')}</p>

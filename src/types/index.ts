@@ -62,6 +62,7 @@ export interface Cleaning {
   teamPaymentValue: number;
   status: 'scheduled' | 'on_the_way' | 'in_progress' | 'completed';
   startTime?: string;
+  endTime?: string;
   estimatedArrival?: string;
   scheduledTime?: string;
   notes?: string;
