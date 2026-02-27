@@ -36,7 +36,9 @@ export default function Dashboard() {
   const [cleanings, setCleanings] = useState<Cleaning[]>([]);
   const [staffList, setStaffList] = useState<UserProfile[]>([]);
   const [budgetRequests, setBudgetRequests] = useState<BudgetRequest[]>([]);
+  const [allCompletedCleanings, setAllCompletedCleanings] = useState<Cleaning[]>([]);
   const [loading, setLoading] = useState(true);
+  const [view, setView] = useState<'overview' | 'payments'>('overview');
   const [selectedCleaning, setSelectedCleaning] = useState<Cleaning | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
@@ -68,11 +70,18 @@ export default function Dashboard() {
           setBudgetRequests(budgets.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
         });
 
+      const unsubAllCompleted = db.collection('cleanings')
+        .where('status', '==', 'completed')
+        .onSnapshot((snapshot) => {
+          setAllCompletedCleanings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Cleaning)));
+        });
+
       return () => {
         unsubClients();
         unsubCleanings();
         unsubStaff();
         unsubBudgets();
+        unsubAllCompleted();
       };
     }
 
@@ -81,6 +90,11 @@ export default function Dashboard() {
       unsubCleanings();
     };
   }, [isAdmin]);
+
+  const handleTogglePaymentStatus = async (cleaningId: string, currentStatus: string | undefined) => {
+    const nextStatus = currentStatus === 'paid' ? 'pending' : 'paid';
+    await db.collection('cleanings').doc(cleaningId).update({ paymentStatus: nextStatus });
+  };
 
   const handleAssignStaff = async (cleaningId: string, staffId: string, isChecked: boolean) => {
     const cleaning = cleanings.find(c => c.id === cleaningId);
@@ -126,228 +140,311 @@ export default function Dashboard() {
           <h1 className="text-3xl font-bold text-petrol">{t('welcome')}, {user?.name}</h1>
           <p className="text-slate-500">{t('todaySummary')}.</p>
         </div>
-        {isAdmin && (
-          <Link to="/clients/new" className="btn-primary flex items-center gap-2">
-            <Plus size={20} />
-            {t('registerClient')}
-          </Link>
-        )}
-      </header>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <motion.div whileHover={{ y: -5 }} className="card flex items-center gap-4">
-          <div className="p-3 bg-petrol/10 rounded-xl text-petrol">
-            <Users size={24} />
-          </div>
-          <div>
-            <p className="text-sm text-slate-500">{t('activeClients')}</p>
-            <p className="text-2xl font-bold">{clients.length}</p>
-          </div>
-        </motion.div>
-
-        <motion.div whileHover={{ y: -5 }} className="card flex items-center gap-4">
-          <div className="p-3 bg-blue-100 rounded-xl text-blue-600">
-            <Calendar size={24} />
-          </div>
-          <div>
-            <p className="text-sm text-slate-500">{t('upcomingCleanings')}</p>
-            <p className="text-2xl font-bold">{cleanings.length}</p>
-          </div>
-        </motion.div>
-
-        {isAdmin && (
-          <motion.div whileHover={{ y: -5 }} className="card flex items-center gap-4">
-            <div className="p-3 bg-purple-100 rounded-xl text-purple-600">
-              <Calculator size={24} />
-            </div>
-            <div>
-              <p className="text-sm text-slate-500">{t('pendingBudgets')}</p>
-              <p className="text-2xl font-bold">{budgetRequests.length}</p>
-            </div>
-          </motion.div>
-        )}
-
-        {isAdmin && (
-          <>
-            <motion.div whileHover={{ y: -5 }} className="card flex items-center gap-4">
-              <div className="p-3 bg-emerald-100 rounded-xl text-emerald-600">
-                <DollarSign size={24} />
-              </div>
-              <div>
-                <p className="text-sm text-slate-500">{t('totalRevenue')}</p>
-                <p className="text-2xl font-bold">${totalRevenue.toLocaleString()}</p>
-              </div>
-            </motion.div>
-
-            <motion.div whileHover={{ y: -5 }} className="card flex items-center gap-4">
-              <div className="p-3 bg-gold-light rounded-xl text-gold">
-                <TrendingUp size={24} />
-              </div>
-              <div>
-                <p className="text-sm text-slate-500">{t('totalRevenue')} (Net)</p>
-                <p className="text-2xl font-bold">${totalProfit.toLocaleString()}</p>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </div>
-
-      {/* Budget Requests Section */}
-      {isAdmin && budgetRequests.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="text-xl font-bold text-petrol flex items-center gap-2">
-            <Calculator size={20} />
-            {t('pendingBudgets')}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {budgetRequests.map(budget => (
-              <div key={budget.id} className="card border-purple-100 hover:border-purple-300 transition-colors">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="font-bold text-lg text-petrol">{budget.clientName}</h3>
-                    <p className="text-xs text-slate-400">{new Date(budget.createdAt).toLocaleString()}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-petrol">${budget.totalValue}</p>
-                    <p className="text-[10px] text-slate-400 uppercase font-bold">{t(budget.serviceType as any)}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-2 text-sm text-slate-600 mb-4">
-                  <div className="flex items-center gap-2">
-                    <MapPin size={14} className="text-slate-400" />
-                    <span>{budget.address}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock size={14} className="text-slate-400" />
-                    <span className="text-xs">
-                      {Object.entries(budget.extras).filter(([_, v]) => (v as number) > 0).map(([k, v]) => `${t(k + 'Addon' as any)} (x${v})`).join(', ') || 'No extras'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 pt-4 border-t border-slate-100">
-                  <button 
-                    onClick={() => handleUpdateBudgetStatus(budget.id!, 'approved')}
-                    className="flex-1 bg-emerald-500 text-white py-2 rounded-xl text-sm font-bold hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Check size={16} />
-                    {t('completed')}
-                  </button>
-                  <button 
-                    onClick={() => handleUpdateBudgetStatus(budget.id!, 'rejected')}
-                    className="flex-1 bg-slate-100 text-slate-600 py-2 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Trash2 size={16} />
-                    {t('delete')}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Today's Schedule */}
-      <section className="space-y-4">
-        <h2 className="text-xl font-bold text-petrol flex items-center gap-2">
-          <Clock size={20} />
-          {t('upcomingCleanings')} - {format(new Date(), 'dd/MM/yyyy')}
-        </h2>
-        <div className="grid grid-cols-1 gap-4">
-          {cleanings.length > 0 ? cleanings.map(cleaning => (
-            <div key={cleaning.id} className="card hover:border-petrol transition-colors group">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="flex gap-4 items-center flex-1">
-                  <div className={`w-2 h-12 rounded-full ${cleaning.clientType === 'airbnb' ? 'bg-gold' : 'bg-petrol'}`} />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-lg">{cleaning.clientName}</h3>
-                      <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                        cleaning.status === 'completed' ? 'bg-emerald-100 text-emerald-600' : 
-                        cleaning.status === 'in_progress' ? 'bg-blue-100 text-blue-600' :
-                        cleaning.status === 'on_the_way' ? 'bg-gold/10 text-gold' :
-                        'bg-slate-100 text-slate-500'
-                      }`}>
-                        {t(cleaning.status)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-slate-500 text-sm">
-                      <MapPin size={14} />
-                      {cleaning.clientAddress}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-6 w-full md:w-auto">
-                  <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-xl border border-slate-100 min-w-[150px]">
-                    <User size={18} className="text-petrol" />
-                    <div className="flex flex-col w-full">
-                      <span className="text-[10px] text-slate-400 uppercase font-bold leading-none mb-1">{t('staff')}</span>
-                      {isAdmin ? (
-                        <div className="relative group/select">
-                          <div className="text-sm font-bold text-petrol cursor-pointer truncate max-w-[120px]">
-                            {cleaning.assignedStaffNames?.join(', ') || t('selectStaff')}
-                          </div>
-                          <div className="absolute top-full left-0 mt-1 bg-white shadow-xl rounded-xl border p-2 z-20 hidden group-hover/select:block min-w-[180px]">
-                            {staffList.map(staff => (
-                              <label key={staff.uid} className="flex items-center gap-2 p-1 hover:bg-slate-50 rounded cursor-pointer">
-                                <input 
-                                  type="checkbox" 
-                                  className="w-3 h-3 accent-petrol"
-                                  checked={(cleaning.assignedStaffIds || []).includes(staff.uid)}
-                                  onChange={e => handleAssignStaff(cleaning.id!, staff.uid, e.target.checked)}
-                                />
-                                <span className="text-xs text-slate-700">{staff.name}</span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-sm font-bold text-petrol truncate max-w-[120px]">
-                          {cleaning.assignedStaffNames?.join(', ') || '---'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="text-right ml-auto md:ml-0 flex flex-col items-end gap-1">
-                    <p className="text-xs text-slate-400 uppercase tracking-wider">{t('teamPay')}</p>
-                    <p className="font-bold text-petrol">${cleaning.teamPaymentValue}</p>
-                    <div className="flex gap-2">
-                      {cleaning.staffNotes && <MessageSquare size={14} className="text-blue-500" />}
-                      {(cleaning.photosBefore?.length || 0) + (cleaning.photosAfter?.length || 0) + (cleaning.extraPhotos?.length || 0) > 0 && (
-                        <ImageIcon size={14} className="text-emerald-500" />
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => setSelectedCleaning(cleaning)}
-                      className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-petrol"
-                      title="View Details"
-                    >
-                      <Maximize2 size={20} />
-                    </button>
-                    <button 
-                      onClick={() => navigate(`/clients/${cleaning.clientId}`)}
-                      className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-                    >
-                      <ChevronRight className="text-slate-300 group-hover:text-petrol transition-colors" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )) : (
-            <div className="card text-center py-12 text-slate-400">
-              {t('noCleaningsToday')}
+        <div className="flex items-center gap-4">
+          {isAdmin && (
+            <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
+              <button 
+                onClick={() => setView('overview')}
+                className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${view === 'overview' ? 'bg-white text-petrol shadow-sm' : 'text-slate-500'}`}
+              >
+                <TrendingUp size={16} />
+                {t('dashboard')}
+              </button>
+              <button 
+                onClick={() => setView('payments')}
+                className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${view === 'payments' ? 'bg-white text-petrol shadow-sm' : 'text-slate-500'}`}
+              >
+                <DollarSign size={16} />
+                {t('reports')}
+              </button>
             </div>
           )}
+          {isAdmin && (
+            <Link to="/clients/new" className="btn-primary flex items-center gap-2">
+              <Plus size={20} />
+              {t('registerClient')}
+            </Link>
+          )}
         </div>
-      </section>
+      </header>
+
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={view}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2 }}
+        >
+          {view === 'overview' ? (
+            <div className="space-y-8">
+              {/* Stats Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <motion.div whileHover={{ y: -5 }} className="card flex items-center gap-4">
+                  <div className="p-3 bg-petrol/10 rounded-xl text-petrol">
+                    <Users size={24} />
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500">{t('activeClients')}</p>
+                    <p className="text-2xl font-bold">{clients.length}</p>
+                  </div>
+                </motion.div>
+
+                <motion.div whileHover={{ y: -5 }} className="card flex items-center gap-4">
+                  <div className="p-3 bg-blue-100 rounded-xl text-blue-600">
+                    <Calendar size={24} />
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500">{t('upcomingCleanings')}</p>
+                    <p className="text-2xl font-bold">{cleanings.length}</p>
+                  </div>
+                </motion.div>
+
+                {isAdmin && (
+                  <motion.div whileHover={{ y: -5 }} className="card flex items-center gap-4">
+                    <div className="p-3 bg-purple-100 rounded-xl text-purple-600">
+                      <Calculator size={24} />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-500">{t('pendingBudgets')}</p>
+                      <p className="text-2xl font-bold">{budgetRequests.length}</p>
+                    </div>
+                  </motion.div>
+                )}
+
+                {isAdmin && (
+                  <>
+                    <motion.div whileHover={{ y: -5 }} className="card flex items-center gap-4">
+                      <div className="p-3 bg-emerald-100 rounded-xl text-emerald-600">
+                        <DollarSign size={24} />
+                      </div>
+                      <div>
+                        <p className="text-sm text-slate-500">{t('totalRevenue')}</p>
+                        <p className="text-2xl font-bold">${totalRevenue.toLocaleString()}</p>
+                      </div>
+                    </motion.div>
+
+                    <motion.div whileHover={{ y: -5 }} className="card flex items-center gap-4">
+                      <div className="p-3 bg-gold-light rounded-xl text-gold">
+                        <TrendingUp size={24} />
+                      </div>
+                      <div>
+                        <p className="text-sm text-slate-500">{t('totalRevenue')} (Net)</p>
+                        <p className="text-2xl font-bold">${totalProfit.toLocaleString()}</p>
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </div>
+
+              {/* Budget Requests Section */}
+              {isAdmin && budgetRequests.length > 0 && (
+                <section className="space-y-4">
+                  <h2 className="text-xl font-bold text-petrol flex items-center gap-2">
+                    <Calculator size={20} />
+                    {t('pendingBudgets')}
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {budgetRequests.map(budget => (
+                      <div key={budget.id} className="card border-purple-100 hover:border-purple-300 transition-colors">
+                        <div className="flex justify-between items-start mb-4">
+                          <div>
+                            <h3 className="font-bold text-lg text-petrol">{budget.clientName}</h3>
+                            <p className="text-xs text-slate-400">{new Date(budget.createdAt).toLocaleString()}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-2xl font-bold text-petrol">${budget.totalValue}</p>
+                            <p className="text-[10px] text-slate-400 uppercase font-bold">{t(budget.serviceType as any)}</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 text-sm text-slate-600 mb-4">
+                          <div className="flex items-center gap-2">
+                            <MapPin size={14} className="text-slate-400" />
+                            <span>{budget.address}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock size={14} className="text-slate-400" />
+                            <span className="text-xs">
+                              {Object.entries(budget.extras).filter(([_, v]) => (v as number) > 0).map(([k, v]) => `${t(k + 'Addon' as any)} (x${v})`).join(', ') || 'No extras'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 pt-4 border-t border-slate-100">
+                          <button 
+                            onClick={() => handleUpdateBudgetStatus(budget.id!, 'approved')}
+                            className="flex-1 bg-emerald-500 text-white py-2 rounded-xl text-sm font-bold hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2"
+                          >
+                            <Check size={16} />
+                            {t('completed')}
+                          </button>
+                          <button 
+                            onClick={() => handleUpdateBudgetStatus(budget.id!, 'rejected')}
+                            className="flex-1 bg-slate-100 text-slate-600 py-2 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors flex items-center justify-center gap-2"
+                          >
+                            <Trash2 size={16} />
+                            {t('delete')}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Today's Schedule */}
+              <section className="space-y-4">
+                <h2 className="text-xl font-bold text-petrol flex items-center gap-2">
+                  <Clock size={20} />
+                  {t('upcomingCleanings')} - {format(new Date(), 'dd/MM/yyyy')}
+                </h2>
+                <div className="grid grid-cols-1 gap-4">
+                  {cleanings.length > 0 ? cleanings.map(cleaning => (
+                    <div key={cleaning.id} className="card hover:border-petrol transition-colors group">
+                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="flex gap-4 items-center flex-1">
+                          <div className={`w-2 h-12 rounded-full ${cleaning.clientType === 'airbnb' ? 'bg-gold' : 'bg-petrol'}`} />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-bold text-lg">{cleaning.clientName}</h3>
+                              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                                cleaning.status === 'completed' ? 'bg-emerald-100 text-emerald-600' : 
+                                cleaning.status === 'in_progress' ? 'bg-blue-100 text-blue-600' :
+                                cleaning.status === 'on_the_way' ? 'bg-gold/10 text-gold' :
+                                'bg-slate-100 text-slate-500'
+                              }`}>
+                                {t(cleaning.status)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-slate-500 text-sm">
+                              <MapPin size={14} />
+                              {cleaning.clientAddress}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-6 w-full md:w-auto">
+                          <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-xl border border-slate-100 min-w-[150px]">
+                            <User size={18} className="text-petrol" />
+                            <div className="flex flex-col w-full">
+                              <span className="text-[10px] text-slate-400 uppercase font-bold leading-none mb-1">{t('staff')}</span>
+                              {isAdmin ? (
+                                <div className="relative group/select">
+                                  <div className="text-sm font-bold text-petrol cursor-pointer truncate max-w-[120px]">
+                                    {cleaning.assignedStaffNames?.join(', ') || t('selectStaff')}
+                                  </div>
+                                  <div className="absolute top-full left-0 mt-1 bg-white shadow-xl rounded-xl border p-2 z-20 hidden group-hover/select:block min-w-[180px]">
+                                    {staffList.map(staff => (
+                                      <label key={staff.uid} className="flex items-center gap-2 p-1 hover:bg-slate-50 rounded cursor-pointer">
+                                        <input 
+                                          type="checkbox" 
+                                          className="w-3 h-3 accent-petrol"
+                                          checked={(cleaning.assignedStaffIds || []).includes(staff.uid)}
+                                          onChange={e => handleAssignStaff(cleaning.id!, staff.uid, e.target.checked)}
+                                        />
+                                        <span className="text-xs text-slate-700">{staff.name}</span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-sm font-bold text-petrol truncate max-w-[120px]">
+                                  {cleaning.assignedStaffNames?.join(', ') || '---'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="text-right ml-auto md:ml-0 flex flex-col items-end gap-1">
+                            <p className="text-xs text-slate-400 uppercase tracking-wider">{t('teamPay')}</p>
+                            <p className="font-bold text-petrol">${cleaning.teamPaymentValue}</p>
+                            <div className="flex gap-2">
+                              {cleaning.staffNotes && <MessageSquare size={14} className="text-blue-500" />}
+                              {(cleaning.photosBefore?.length || 0) + (cleaning.photosAfter?.length || 0) + (cleaning.extraPhotos?.length || 0) > 0 && (
+                                <ImageIcon size={14} className="text-emerald-500" />
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            <button 
+                              onClick={() => setSelectedCleaning(cleaning)}
+                              className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-petrol"
+                              title="View Details"
+                            >
+                              <Maximize2 size={20} />
+                            </button>
+                            <button 
+                              onClick={() => navigate(`/clients/${cleaning.clientId}`)}
+                              className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                            >
+                              <ChevronRight className="text-slate-300 group-hover:text-petrol transition-colors" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )) : (
+                    <div className="card text-center py-12 text-slate-400">
+                      {t('noCleaningsToday')}
+                    </div>
+                  )}
+                </div>
+              </section>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              <div className="card space-y-6">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-bold text-petrol flex items-center gap-2">
+                    <DollarSign size={20} />
+                    {t('combinedCleanings')}
+                  </h2>
+                </div>
+                <div className="space-y-4">
+                  {allCompletedCleanings.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(cleaning => (
+                    <div key={cleaning.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                      <div className="flex gap-4 items-center flex-1">
+                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-petrol shadow-sm">
+                          <Calendar size={20} />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-slate-800">{cleaning.clientName}</h4>
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-1">
+                            <span className="flex items-center gap-1"><Clock size={12} /> {cleaning.date}</span>
+                            <span className="flex items-center gap-1"><MapPin size={12} /> {cleaning.clientAddress}</span>
+                            <span className="flex items-center gap-1 font-bold text-petrol"><User size={12} /> {cleaning.assignedStaffNames?.join(', ') || '---'}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
+                        <div className="text-right">
+                          <p className="text-lg font-black text-petrol">${cleaning.teamPaymentValue}</p>
+                          <p className="text-[10px] text-slate-400 uppercase font-bold">{t('teamPay')}</p>
+                        </div>
+                        <button 
+                          onClick={() => handleTogglePaymentStatus(cleaning.id!, cleaning.paymentStatus)}
+                          className={`px-4 py-2 rounded-xl text-xs font-bold uppercase transition-all ${
+                            cleaning.paymentStatus === 'paid' 
+                              ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' 
+                              : 'bg-gold/10 text-gold border border-gold/20 hover:bg-gold/20'
+                          }`}
+                        >
+                          {cleaning.paymentStatus === 'paid' ? t('paid') : t('pending')}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {allCompletedCleanings.length === 0 && (
+                    <p className="text-center text-slate-400 py-12">{t('noDataFound')}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
 
       {/* Cleaning Details Modal */}
       <AnimatePresence>

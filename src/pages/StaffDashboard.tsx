@@ -17,7 +17,8 @@ import {
   MessageSquare,
   Image as ImageIcon,
   ExternalLink,
-  List
+  List,
+  DollarSign
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
@@ -45,7 +46,7 @@ export default function StaffDashboard() {
   const [allCleanings, setAllCleanings] = useState<Cleaning[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
-  const [view, setView] = useState<'list' | 'calendar'>('list');
+  const [view, setView] = useState<'list' | 'calendar' | 'payments'>('list');
 
   useEffect(() => {
     if (!user) return;
@@ -122,6 +123,10 @@ export default function StaffDashboard() {
     resource: c
   }));
 
+  const combinedCleanings = allCleanings.filter(c => c.status === 'completed' && (!c.paymentStatus || c.paymentStatus === 'pending'));
+  const finalizedCleanings = allCleanings.filter(c => c.status === 'completed' && c.paymentStatus === 'paid');
+  const totalToReceive = combinedCleanings.reduce((acc, curr) => acc + (curr.teamPaymentValue || 0), 0);
+
   if (loading) return <div className="p-8 text-center">{t('processing')}</div>;
 
   return (
@@ -145,6 +150,13 @@ export default function StaffDashboard() {
           >
             <CalendarIcon size={16} />
             {t('calendar')}
+          </button>
+          <button 
+            onClick={() => setView('payments')}
+            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${view === 'payments' ? 'bg-white text-petrol shadow-sm' : 'text-slate-500'}`}
+          >
+            <DollarSign size={16} />
+            {t('myPayments')}
           </button>
         </div>
       </header>
@@ -400,7 +412,7 @@ export default function StaffDashboard() {
                 )}
               </div>
             </section>
-          ) : (
+          ) : view === 'calendar' ? (
             <section className="card h-[70vh]">
               <Calendar
                 localizer={localizer}
@@ -410,6 +422,80 @@ export default function StaffDashboard() {
                 style={{ height: '100%' }}
                 culture={language}
               />
+            </section>
+          ) : (
+            <section className="space-y-8">
+              {/* Combined Cleanings */}
+              <div className="card space-y-6">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-bold text-petrol flex items-center gap-2">
+                    <DollarSign size={20} />
+                    {t('combinedCleanings')}
+                  </h2>
+                  <div className="bg-petrol/10 px-4 py-2 rounded-xl">
+                    <span className="text-sm text-petrol font-medium">{t('totalEstimate')}: </span>
+                    <span className="text-xl font-black text-petrol">${totalToReceive.toFixed(2)}</span>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  {combinedCleanings.length > 0 ? combinedCleanings.map(cleaning => (
+                    <div key={cleaning.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center">
+                      <div className="flex gap-4 items-center">
+                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-petrol shadow-sm">
+                          <CalendarIcon size={20} />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-slate-800">{cleaning.clientName}</h4>
+                          <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
+                            <span className="flex items-center gap-1"><Clock size={12} /> {cleaning.date} {cleaning.scheduledTime}</span>
+                            <span className="flex items-center gap-1"><MapPin size={12} /> {cleaning.clientAddress}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-black text-petrol">${cleaning.teamPaymentValue}</p>
+                        <span className="text-[10px] font-bold uppercase text-gold bg-gold/10 px-2 py-0.5 rounded-full">{t('pending')}</span>
+                      </div>
+                    </div>
+                  )) : (
+                    <p className="text-center text-slate-400 py-8">{t('noDataFound')}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Finalized Cleanings */}
+              <div className="card space-y-6">
+                <h2 className="text-xl font-bold text-petrol flex items-center gap-2">
+                  <CheckCircle size={20} />
+                  {t('finalizedCleanings')}
+                </h2>
+                
+                <div className="space-y-4">
+                  {finalizedCleanings.length > 0 ? finalizedCleanings.map(cleaning => (
+                    <div key={cleaning.id} className="p-4 bg-emerald-50/30 rounded-2xl border border-emerald-100 flex justify-between items-center">
+                      <div className="flex gap-4 items-center">
+                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-emerald-500 shadow-sm">
+                          <CheckCircle size={20} />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-slate-800">{cleaning.clientName}</h4>
+                          <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
+                            <span className="flex items-center gap-1"><Clock size={12} /> {cleaning.date} {cleaning.scheduledTime}</span>
+                            <span className="flex items-center gap-1"><MapPin size={12} /> {cleaning.clientAddress}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-black text-emerald-600">${cleaning.teamPaymentValue}</p>
+                        <span className="text-[10px] font-bold uppercase text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">{t('paid')}</span>
+                      </div>
+                    </div>
+                  )) : (
+                    <p className="text-center text-slate-400 py-8">{t('noDataFound')}</p>
+                  )}
+                </div>
+              </div>
             </section>
           )}
         </motion.div>

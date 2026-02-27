@@ -136,7 +136,6 @@ export const translations = {
     generateAccurateEstimates: 'Generate accurate estimates for your clients instantly.',
     billTo: 'BILL TO',
     summary: 'SUMMARY',
-    paid: 'Paid',
     brandSettings: 'Brand Settings',
     customizeYourBrand: 'Customize the look and feel of your application.',
     primaryColor: 'Primary Color',
@@ -155,7 +154,12 @@ export const translations = {
     calendar: 'Calendar',
     cleaningHistory: 'Cleaning History',
     budgetSent: 'Budget Sent',
-    numberOfCleanings: 'Number of Cleanings'
+    numberOfCleanings: 'Number of Cleanings',
+    myPayments: 'My Payments',
+    combinedCleanings: 'Combined Cleanings',
+    finalizedCleanings: 'Finalized Cleanings',
+    pending: 'Pending',
+    paid: 'Paid'
   },
   pt: {
     appName: 'Maid By Ana',
@@ -292,7 +296,6 @@ export const translations = {
     generateAccurateEstimates: 'Gere estimativas precisas para seus clientes instantaneamente.',
     billTo: 'COBRAR DE',
     summary: 'RESUMO',
-    paid: 'Pago',
     brandSettings: 'Configurações da Marca',
     customizeYourBrand: 'Personalize a aparência do seu aplicativo.',
     primaryColor: 'Cor Primária',
@@ -311,6 +314,11 @@ export const translations = {
     calendar: 'Calendário',
     cleaningHistory: 'Histórico de Limpeza',
     budgetSent: 'Orçamento Enviado',
-    numberOfCleanings: 'Número de Limpezas'
+    numberOfCleanings: 'Número de Limpezas',
+    myPayments: 'Meus Pagamentos',
+    combinedCleanings: 'Limpezas Combinadas',
+    finalizedCleanings: 'Limpezas Finalizadas',
+    pending: 'Pendente',
+    paid: 'Pago'
   }
 };
