@@ -127,9 +127,18 @@ export default function StaffDashboard() {
     resource: c
   }));
 
-  const combinedCleanings = allCleanings.filter(c => c.status === 'completed' && (!c.paymentStatus || c.paymentStatus === 'pending'));
-  const finalizedCleanings = allCleanings.filter(c => c.status === 'completed' && c.paymentStatus === 'paid');
-  const totalToReceive = combinedCleanings.reduce((acc, curr) => acc + (curr.teamPaymentValue || 0), 0);
+  const combinedCleanings = allCleanings.filter(c => 
+    c.status === 'completed' && 
+    !(c.paidStaffIds || []).includes(user?.uid || '')
+  );
+  const finalizedCleanings = allCleanings.filter(c => 
+    c.status === 'completed' && 
+    (c.paidStaffIds || []).includes(user?.uid || '')
+  );
+  const totalToReceive = combinedCleanings.reduce((acc, curr) => {
+    const share = (curr.teamPaymentValue || 0) / (curr.assignedStaffIds?.length || 1);
+    return acc + share;
+  }, 0);
 
   if (loading) return <div className="p-8 text-center">{t('processing')}</div>;
 
@@ -468,7 +477,9 @@ export default function StaffDashboard() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-lg font-black text-petrol">${cleaning.teamPaymentValue}</p>
+                        <p className="text-lg font-black text-petrol">
+                          ${((cleaning.teamPaymentValue || 0) / (cleaning.assignedStaffIds?.length || 1)).toFixed(2)}
+                        </p>
                         <span className="text-[10px] font-bold uppercase text-gold bg-gold/10 px-2 py-0.5 rounded-full">{t('pending')}</span>
                       </div>
                     </div>
@@ -501,7 +512,9 @@ export default function StaffDashboard() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-lg font-black text-emerald-600">${cleaning.teamPaymentValue}</p>
+                        <p className="text-lg font-black text-emerald-600">
+                          ${((cleaning.teamPaymentValue || 0) / (cleaning.assignedStaffIds?.length || 1)).toFixed(2)}
+                        </p>
                         <span className="text-[10px] font-bold uppercase text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">{t('paid')}</span>
                       </div>
                     </div>

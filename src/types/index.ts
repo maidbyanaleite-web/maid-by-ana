@@ -74,6 +74,7 @@ export interface Cleaning {
   clientFeedback?: string;
   adminNotes?: string;
   paymentStatus?: 'pending' | 'paid';
+  paidStaffIds?: string[];
 }
 
 export interface BudgetResult {

@@ -91,9 +91,22 @@ export default function Dashboard() {
     };
   }, [isAdmin]);
 
-  const handleTogglePaymentStatus = async (cleaningId: string, currentStatus: string | undefined) => {
-    const nextStatus = currentStatus === 'paid' ? 'pending' : 'paid';
-    await db.collection('cleanings').doc(cleaningId).update({ paymentStatus: nextStatus });
+  const handleToggleStaffPayment = async (cleaning: Cleaning, staffId: string) => {
+    const currentPaidIds = cleaning.paidStaffIds || [];
+    let nextPaidIds: string[];
+    
+    if (currentPaidIds.includes(staffId)) {
+      nextPaidIds = currentPaidIds.filter(id => id !== staffId);
+    } else {
+      nextPaidIds = [...currentPaidIds, staffId];
+    }
+    
+    const allPaid = (cleaning.assignedStaffIds || []).every(id => nextPaidIds.includes(id));
+    
+    await db.collection('cleanings').doc(cleaning.id).update({ 
+      paidStaffIds: nextPaidIds,
+      paymentStatus: allPaid ? 'paid' : 'pending'
+    });
   };
 
   const handleAssignStaff = async (cleaningId: string, staffId: string, isChecked: boolean) => {
@@ -403,39 +416,54 @@ export default function Dashboard() {
                   </h2>
                 </div>
                 <div className="space-y-4">
-                  {allCompletedCleanings.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(cleaning => (
-                    <div key={cleaning.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                      <div className="flex gap-4 items-center flex-1">
-                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-petrol shadow-sm">
-                          <Calendar size={20} />
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-slate-800">{cleaning.clientName}</h4>
-                          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-1">
-                            <span className="flex items-center gap-1"><Clock size={12} /> {cleaning.date}</span>
-                            <span className="flex items-center gap-1"><MapPin size={12} /> {cleaning.clientAddress}</span>
-                            <span className="flex items-center gap-1 font-bold text-petrol"><User size={12} /> {cleaning.assignedStaffNames?.join(', ') || '---'}</span>
+                  {allCompletedCleanings
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                    .flatMap(cleaning => 
+                      (cleaning.assignedStaffIds || []).map((staffId, index) => ({
+                        ...cleaning,
+                        staffId,
+                        staffName: cleaning.assignedStaffNames?.[index] || '---',
+                        individualValue: (cleaning.teamPaymentValue || 0) / (cleaning.assignedStaffIds?.length || 1),
+                        isPaid: (cleaning.paidStaffIds || []).includes(staffId)
+                      }))
+                    )
+                    .map((item, idx) => (
+                      <div key={`${item.id}-${item.staffId}-${idx}`} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="flex gap-4 items-center flex-1">
+                          <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-petrol shadow-sm">
+                            <Calendar size={20} />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-bold text-slate-800">{item.clientName}</h4>
+                              <span className="text-[10px] bg-petrol/10 text-petrol px-2 py-0.5 rounded-full font-bold uppercase">
+                                {item.staffName}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-1">
+                              <span className="flex items-center gap-1"><Clock size={12} /> {item.date}</span>
+                              <span className="flex items-center gap-1"><MapPin size={12} /> {item.clientAddress}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
-                        <div className="text-right">
-                          <p className="text-lg font-black text-petrol">${cleaning.teamPaymentValue}</p>
-                          <p className="text-[10px] text-slate-400 uppercase font-bold">{t('teamPay')}</p>
+                        <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
+                          <div className="text-right">
+                            <p className="text-lg font-black text-petrol">${item.individualValue.toFixed(2)}</p>
+                            <p className="text-[10px] text-slate-400 uppercase font-bold">{t('teamPay')}</p>
+                          </div>
+                          <button 
+                            onClick={() => handleToggleStaffPayment(item, item.staffId)}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase transition-all ${
+                              item.isPaid 
+                                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' 
+                                : 'bg-gold/10 text-gold border border-gold/20 hover:bg-gold/20'
+                            }`}
+                          >
+                            {item.isPaid ? t('paid') : t('pending')}
+                          </button>
                         </div>
-                        <button 
-                          onClick={() => handleTogglePaymentStatus(cleaning.id!, cleaning.paymentStatus)}
-                          className={`px-4 py-2 rounded-xl text-xs font-bold uppercase transition-all ${
-                            cleaning.paymentStatus === 'paid' 
-                              ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' 
-                              : 'bg-gold/10 text-gold border border-gold/20 hover:bg-gold/20'
-                          }`}
-                        >
-                          {cleaning.paymentStatus === 'paid' ? t('paid') : t('pending')}
-                        </button>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                   {allCompletedCleanings.length === 0 && (
                     <p className="text-center text-slate-400 py-12">{t('noDataFound')}</p>
                   )}
