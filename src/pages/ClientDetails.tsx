@@ -40,6 +40,9 @@ export default function ClientDetails() {
   const [loading, setLoading] = useState(true);
   const [staffList, setStaffList] = useState<UserProfile[]>([]);
   const [clientCleanings, setClientCleanings] = useState<Cleaning[]>([]);
+  const [pastCleanings, setPastCleanings] = useState<Cleaning[]>([]);
+  const [futureCleanings, setFutureCleanings] = useState<Cleaning[]>([]);
+  const [todaysCleanings, setTodaysCleanings] = useState<Cleaning[]>([]);
   const [selectedCleaning, setSelectedCleaning] = useState<Cleaning | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -82,33 +85,19 @@ export default function ClientDetails() {
     return () => unsubscribe();
   }, [isAdmin]);
 
-  const handleScheduleCleaning = async () => {
-    if (!client || !id) return;
+  useEffect(() => {
+    const today = format(new Date(), 'yyyy-MM-dd');
     
-    const cleaningDate = prompt(t('addCleaning') + ' (YYYY-MM-DD)', format(new Date(), 'yyyy-MM-dd'));
-    if (!cleaningDate) return;
+    const past = clientCleanings.filter(c => c.date < today);
+    const future = clientCleanings.filter(c => c.date > today);
+    const todays = clientCleanings.filter(c => c.date === today);
 
-    const scheduledTime = prompt(t('scheduledTime') + ' (HH:MM)', '09:00');
-    if (!scheduledTime) return;
+    setPastCleanings(past);
+    setFutureCleanings(future);
+    setTodaysCleanings(todays);
+  }, [clientCleanings]);
 
-    const newCleaning: Partial<Cleaning> = {
-      clientId: id,
-      clientName: client.name,
-      clientAddress: client.address,
-      clientType: client.type,
-      date: cleaningDate,
-      scheduledTime: scheduledTime,
-      assignedStaffIds: client.assignedStaffIds || [],
-      assignedStaffNames: staffList.filter(s => (client.assignedStaffIds || []).includes(s.uid)).map(s => s.name),
-      serviceValue: client.serviceValue,
-      teamPaymentValue: client.teamPaymentValue,
-      status: 'scheduled',
-      photosBefore: [],
-      photosAfter: []
-    };
 
-    await db.collection('cleanings').add(newCleaning);
-  };
 
   const handleAssignStaffToCleaning = async (cleaningId: string, staffId: string, isChecked: boolean) => {
     const cleaning = clientCleanings.find(c => c.id === cleaningId);
@@ -404,12 +393,12 @@ export default function ClientDetails() {
             </div>
           </div>
 
-          {/* Cleaning History */}
+          {/* Cleanings */}
           <div className="card">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-petrol flex items-center gap-2">
                 <Clock size={20} />
-                {t('cleaningHistory' as any)}
+                {t('cleanings' as any)}
               </h2>
               {isAdmin && (
                 <button 
@@ -421,21 +410,66 @@ export default function ClientDetails() {
                 </button>
               )}
             </div>
-            <div className="space-y-4">
-              {clientCleanings.map(cleaning => (
-                <CleaningCard 
-                  key={cleaning.id} 
-                  cleaning={cleaning} 
-                  isAdmin={isAdmin || false} 
-                  onEdit={setEditingCleaning}
-                  onDelete={handleDeleteCleaning}
-                />
-              ))}
-              {clientCleanings.length === 0 && (
-                <div className="col-span-full py-12 text-center text-slate-400 border-2 border-dashed border-slate-100 rounded-2xl">
-                  <p>{t('noCleanings')}</p>
+            <div className="space-y-6">
+              {/* Today's Cleanings */}
+              <div>
+                <h3 className="text-lg font-semibold text-slate-700 mb-3 border-b pb-2">{t('todaysCleanings' as any)}</h3>
+                <div className="space-y-4">
+                  {todaysCleanings.length > 0 ? todaysCleanings.map(cleaning => (
+                    <CleaningCard 
+                      key={cleaning.id} 
+                      cleaning={cleaning} 
+                      isAdmin={isAdmin || false} 
+                      onEdit={setEditingCleaning}
+                      onDelete={handleDeleteCleaning}
+                    />
+                  )) : (
+                    <div className="text-center py-8 text-slate-400 border-2 border-dashed border-slate-100 rounded-2xl">
+                      <p>{t('noCleaningsForToday' as any)}</p>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
+
+              {/* Upcoming Cleanings */}
+              <div>
+                <h3 className="text-lg font-semibold text-slate-700 mb-3 border-b pb-2">{t('upcomingCleanings' as any)}</h3>
+                <div className="space-y-4">
+                  {futureCleanings.length > 0 ? futureCleanings.map(cleaning => (
+                    <CleaningCard 
+                      key={cleaning.id} 
+                      cleaning={cleaning} 
+                      isAdmin={isAdmin || false} 
+                      onEdit={setEditingCleaning}
+                      onDelete={handleDeleteCleaning}
+                    />
+                  )) : (
+                    <div className="text-center py-8 text-slate-400 border-2 border-dashed border-slate-100 rounded-2xl">
+                      <p>{t('noUpcomingCleanings' as any)}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Past Cleanings */}
+              <div>
+                <h3 className="text-lg font-semibold text-slate-700 mb-3 border-b pb-2">{t('cleaningHistory' as any)}</h3>
+                <div className="space-y-4">
+                  {pastCleanings.length > 0 ? pastCleanings.map(cleaning => (
+                    <CleaningCard 
+                      key={cleaning.id} 
+                      cleaning={cleaning} 
+                      isAdmin={isAdmin || false} 
+                      onEdit={setEditingCleaning}
+                      onDelete={handleDeleteCleaning}
+                    />
+                  )) : (
+                    <div className="text-center py-8 text-slate-400 border-2 border-dashed border-slate-100 rounded-2xl">
+                      <p>{t('noPastCleanings' as any)}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -549,81 +583,21 @@ export default function ClientDetails() {
             </div>
           )}
 
-
-
-          {/* Cleaning History */}
-          <div className="card space-y-4">
-            <h3 className="font-bold text-petrol flex items-center gap-2">
-              <Clock size={18} />
-              {t('upcomingCleanings')}
-            </h3>
-            <div className="space-y-3">
-              {clientCleanings.map(cleaning => (
-                <div key={cleaning.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-slate-700">{cleaning.date}</span>
-                      <button 
-                        onClick={() => setSelectedCleaning(cleaning)}
-                        className="p-1 hover:bg-slate-200 rounded transition-colors text-slate-400 hover:text-petrol"
-                      >
-                        <Maximize2 size={14} />
-                      </button>
-                    </div>
-                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${cleaning.status === 'completed' ? 'bg-emerald-100 text-emerald-600' : 'bg-gold/10 text-gold'}`}>
-                      {t(cleaning.status)}
-                    </span>
-                  </div>
-                  
-                  {isAdmin && (
-                    <div className="flex flex-col gap-1">
-                      <label className="text-[10px] text-slate-400 uppercase font-bold">{t('staff')}</label>
-                      <div className="flex flex-wrap gap-2 p-2 border rounded-lg bg-white">
-                        {staffList.map(staff => (
-                          <label key={staff.uid} className="flex items-center gap-1 cursor-pointer">
-                            <input 
-                              type="checkbox"
-                              className="w-3 h-3 accent-petrol"
-                              checked={(cleaning.assignedStaffIds || []).includes(staff.uid)}
-                              onChange={(e) => handleAssignStaffToCleaning(cleaning.id!, staff.uid, e.target.checked)}
-                            />
-                            <span className="text-[10px] text-slate-600">{staff.name}</span>
-                          </label>
-                        ))}
-                      </div>
-                      <button 
-                        onClick={() => handleUpdateNotes(cleaning.id!, cleaning.notes || '')}
-                        className="mt-1 p-1 hover:bg-slate-200 rounded transition-colors text-slate-400 hover:text-petrol flex items-center gap-1 text-[10px]"
-                        title={t('notes')}
-                      >
-                        <FileText size={12} />
-                        {t('notes')}
-                      </button>
-                    </div>
-                  )}
-
-                  {cleaning.staffNotes && (
-                    <div className="bg-blue-50/50 p-2 rounded-lg border border-blue-100 flex gap-2">
-                      <MessageSquare size={12} className="text-blue-500 shrink-0 mt-0.5" />
-                      <p className="text-[10px] text-blue-800 leading-tight">{cleaning.staffNotes}</p>
-                    </div>
-                  )}
-
-                  {!isAdmin && cleaning.assignedStaffIds && (
-                    <div className="flex items-center gap-2">
-                      <User size={12} className="text-petrol" />
-                      <span className="text-xs font-medium text-slate-600">
-                        {cleaning.assignedStaffNames?.join(', ') || '---'}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              ))}
-              {clientCleanings.length === 0 && (
-                <p className="text-center text-slate-400 text-sm py-4">{t('noCleanings')}</p>
-              )}
+          {isAdmin && (
+            <div className="card space-y-4">
+              <h3 className="font-bold text-petrol mb-2">{t('actions')}</h3>
+              
+              <button 
+                onClick={() => setIsAddingCleaning(true)}
+                className="w-full btn-secondary flex items-center justify-center gap-2"
+              >
+                <Plus size={18} />
+                {t('scheduleCleaning' as any)}
+              </button>
             </div>
-          </div>
+          )}
+
+
         </div>
       </div>
 
