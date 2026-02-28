@@ -549,19 +549,7 @@ export default function ClientDetails() {
             </div>
           )}
 
-          {isAdmin && (
-            <div className="card space-y-4">
-              <h3 className="font-bold text-petrol mb-2">{t('actions')}</h3>
-              
-              <button 
-                onClick={handleScheduleCleaning}
-                className="w-full btn-secondary flex items-center justify-center gap-2"
-              >
-                <Plus size={18} />
-                {t('addCleaning')}
-              </button>
-            </div>
-          )}
+
 
           {/* Cleaning History */}
           <div className="card space-y-4">
