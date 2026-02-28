@@ -218,6 +218,15 @@ export default function NewClient() {
           </div>
         )}
 
+        <div className="col-span-1 md:col-span-2">
+          <label className="block text-sm font-medium text-slate-600 mb-1">{t('notes')}</label>
+          <textarea 
+            className="input"
+            rows={4}
+            onChange={e => setFormData({...formData, notes: e.target.value})}
+          ></textarea>
+        </div>
+
         <div className="flex justify-end pt-6">
           <button
             type="submit"

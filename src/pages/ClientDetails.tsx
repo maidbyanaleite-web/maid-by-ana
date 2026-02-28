@@ -561,6 +561,16 @@ export default function ClientDetails() {
             </div>
           )}
 
+          {client.notes && isAdmin && (
+            <div className="card space-y-4">
+              <h3 className="font-bold text-petrol mb-2 flex items-center gap-2">
+                <MessageSquare size={18} />
+                {t('notes')}
+              </h3>
+              <p className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg whitespace-pre-wrap">{client.notes}</p>
+            </div>
+          )}
+
           {isAdmin && (
             <div className="card space-y-4">
               <h3 className="font-bold text-petrol mb-2 flex items-center gap-2">
@@ -921,6 +931,16 @@ export default function ClientDetails() {
                     ))}
                   </div>
                 </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-600 mb-1">{t('notes')}</label>
+                  <textarea
+                    className="input"
+                    rows={4}
+                    value={editFormData.notes || ''}
+                    onChange={e => setEditFormData({...editFormData, notes: e.target.value})}
+                  />
+                </div>
               </div>
 
               <div className="mt-8 flex justify-end gap-4">
@@ -982,6 +1002,41 @@ export default function ClientDetails() {
                     required
                   />
                 </div>
+                <div className="col-span-2">
+                  <label className="label">{t('staff')}</label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2 bg-slate-50 rounded-lg">
+                    {staffList.map(staff => (
+                      <label key={staff.uid} className="flex items-center gap-2 text-sm">
+                        <input 
+                          type="checkbox"
+                          checked={(editingCleaning.assignedStaffIds || []).includes(staff.uid)}
+                          onChange={(e) => {
+                            const isChecked = e.target.checked;
+                            const currentIds = editingCleaning.assignedStaffIds || [];
+                            const currentNames = editingCleaning.assignedStaffNames || [];
+                            let nextIds: string[];
+                            let nextNames: string[];
+                            if (isChecked) {
+                              nextIds = [...currentIds, staff.uid];
+                              nextNames = [...currentNames, staff.name];
+                            } else {
+                              const index = currentIds.indexOf(staff.uid);
+                              nextIds = currentIds.filter(id => id !== staff.uid);
+                              nextNames = currentNames.filter((_, i) => i !== index);
+                            }
+                            setEditingCleaning({ 
+                              ...editingCleaning, 
+                              assignedStaffIds: nextIds,
+                              assignedStaffNames: nextNames
+                            });
+                          }}
+                        />
+                        {staff.name}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="pt-4">
                   <button type="submit" className="w-full btn-primary py-3">{t('save')}</button>
                 </div>

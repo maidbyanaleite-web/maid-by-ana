@@ -52,6 +52,7 @@ export interface Client {
   assignedStaffIds?: string[];
   numberOfStaff?: number;
   generalNotes?: string;
+  notes?: string;
 }
 
 export interface Cleaning {
