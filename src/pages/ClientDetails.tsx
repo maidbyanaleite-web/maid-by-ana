@@ -67,9 +67,11 @@ export default function ClientDetails() {
     if (!id) return;
     const unsubscribe = db.collection('cleanings')
       .where('clientId', '==', id)
-      .orderBy('date', 'desc')
       .onSnapshot((snapshot) => {
-        setClientCleanings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Cleaning)));
+        const cleanings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Cleaning));
+        // Sort manually to avoid composite index requirement
+        cleanings.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+        setClientCleanings(cleanings);
       });
     return () => unsubscribe();
   }, [id]);
@@ -307,6 +309,16 @@ export default function ClientDetails() {
 
   return (
     <div className="space-y-8">
+      {/* --- DEBUG PANEL --- */}
+      <div className='card bg-yellow-100 text-yellow-900 border border-yellow-300'>
+        <h3 className='font-bold text-sm mb-2'>Debug Information</h3>
+        <p className='text-xs'>Total cleanings found in database for this client: <strong>{clientCleanings.length}</strong></p>
+        <p className='text-xs'>Cleanings filtered for Today: <strong>{todaysCleanings.length}</strong></p>
+        <p className='text-xs'>Cleanings filtered for Future: <strong>{futureCleanings.length}</strong></p>
+        <p className='text-xs'>Cleanings filtered for Past: <strong>{pastCleanings.length}</strong></p>
+      </div>
+      {/* --- END DEBUG PANEL --- */}
+
       <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-500 hover:text-petrol transition-colors">
         <ArrowLeft size={20} />
         {t('cancel')}
