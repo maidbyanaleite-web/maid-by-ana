@@ -107,6 +107,10 @@ export default function Dashboard() {
           setReminders(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any)));
         });
 
+      const unsubAllCleanings = db.collection('cleanings').onSnapshot((snapshot) => {
+        setAllCleanings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Cleaning)));
+      });
+
       return () => {
         unsubClients();
         unsubCleanings();
@@ -114,20 +118,7 @@ export default function Dashboard() {
         unsubBudgets();
         unsubAllCompleted();
         unsubReminders();
-
-        const unsubAllCleanings = db.collection('cleanings').onSnapshot((snapshot) => {
-          setAllCleanings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Cleaning)));
-        });
-
-        return () => {
-          unsubClients();
-          unsubCleanings();
-          unsubStaff();
-          unsubBudgets();
-          unsubAllCompleted();
-          unsubReminders();
-          unsubAllCleanings();
-        };
+        unsubAllCleanings();
       };
     }
 
