@@ -167,7 +167,9 @@ export const translations = {
     cleaningDetails: 'Cleaning Details',
     date: 'Date',
     time: 'Time',
-    editCleaning: 'Edit Cleaning'
+    editCleaning: 'Edit Cleaning',
+    sameDayCheckIn: 'Same-day check-in',
+    clientNotes: 'Client Notes'
   },
   pt: {
     appName: 'Maid By Ana',
@@ -335,6 +337,8 @@ export const translations = {
     cleaningDetails: 'Detalhes da Limpeza',
     date: 'Data',
     time: 'Hora',
-    editCleaning: 'Editar Limpeza'
+    editCleaning: 'Editar Limpeza',
+    sameDayCheckIn: 'Check-in no mesmo dia',
+    clientNotes: 'Notas do Cliente'
   }
 };

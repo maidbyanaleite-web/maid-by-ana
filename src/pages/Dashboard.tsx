@@ -441,6 +441,12 @@ export default function Dashboard() {
                               }`}>
                                 {t(cleaning.status)}
                               </span>
+                              {cleaning.isSameDayCheckIn && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[10px] font-black animate-pulse border border-red-200">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
+                                  CHECK-IN SAME DAY
+                                </span>
+                              )}
                             </div>
                             <div className="flex items-center gap-2 text-slate-500 text-sm">
                               <MapPin size={14} />
@@ -740,6 +746,12 @@ export default function Dashboard() {
                   <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${selectedCleaning.clientType === 'airbnb' ? 'bg-gold/10 text-gold' : 'bg-petrol/10 text-petrol'}`}>
                     {t(selectedCleaning.clientType)}
                   </span>
+                  {selectedCleaning.isSameDayCheckIn && (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-red-100 text-red-600 text-xs font-black animate-pulse border border-red-200">
+                      <span className="w-2 h-2 rounded-full bg-red-600" />
+                      CHECK-IN SAME DAY
+                    </span>
+                  )}
                 </div>
                 <p className="text-slate-500 flex items-center gap-2">
                   <MapPin size={16} />

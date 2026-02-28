@@ -48,6 +48,35 @@ export default function StaffDashboard() {
   const [loading, setLoading] = useState(true);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [view, setView] = useState<'list' | 'calendar' | 'payments'>('list');
+  const [clientNotes, setClientNotes] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const fetchClientNotes = async () => {
+      const clientIds = [...new Set(allCleanings.map(c => c.clientId))];
+      const notes: Record<string, string> = {};
+      
+      for (const id of clientIds) {
+        if (id && !clientNotes[id]) {
+          try {
+            const doc = await db.collection('clients').doc(id).get();
+            if (doc.exists) {
+              notes[id] = doc.data()?.notes || '';
+            }
+          } catch (error) {
+            console.error("Error fetching client notes:", error);
+          }
+        }
+      }
+      
+      if (Object.keys(notes).length > 0) {
+        setClientNotes(prev => ({ ...prev, ...notes }));
+      }
+    };
+
+    if (allCleanings.length > 0) {
+      fetchClientNotes();
+    }
+  }, [allCleanings]);
 
   useEffect(() => {
     if (!user) return;
@@ -287,6 +316,12 @@ export default function StaffDashboard() {
                     <span className={`w-2 h-2 rounded-full ${cleaning.status === 'completed' ? 'bg-emerald-500' : 'bg-gold animate-pulse'}`} />
                     {t(cleaning.status)}
                   </p>
+                  {cleaning.isSameDayCheckIn && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[10px] font-black animate-pulse border border-red-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
+                      CHECK-IN SAME DAY
+                    </span>
+                  )}
                   {(cleaning.startTime || cleaning.endTime) && (
                     <div className="text-[10px] text-slate-500 font-medium">
                       {cleaning.startTime && <span>{t('startTime')}: {cleaning.startTime}</span>}
@@ -330,6 +365,19 @@ export default function StaffDashboard() {
                     <div>
                       <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">{t('notes')} (Admin)</p>
                       <p className="text-sm text-blue-900 leading-relaxed font-medium">{cleaning.notes}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Client Notes (General) */}
+                {clientNotes[cleaning.clientId] && (
+                  <div className="bg-purple-50/50 p-5 rounded-2xl border border-purple-100 flex gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600 shrink-0">
+                      <MessageSquare size={20} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider mb-1">{t('clientNotes') || 'Client Notes'}</p>
+                      <p className="text-sm text-purple-900 leading-relaxed font-medium whitespace-pre-wrap">{clientNotes[cleaning.clientId]}</p>
                     </div>
                   </div>
                 )}

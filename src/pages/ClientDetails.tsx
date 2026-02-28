@@ -563,7 +563,7 @@ export default function ClientDetails() {
             </div>
           )}
 
-          {client.notes && isAdmin && (
+          {client.notes && (
             <div className="card space-y-4">
               <h3 className="font-bold text-petrol mb-2 flex items-center gap-2">
                 <MessageSquare size={18} />
@@ -1004,6 +1004,18 @@ export default function ClientDetails() {
                     required
                   />
                 </div>
+                <div className="flex items-center gap-2 pt-2">
+                  <input
+                    type="checkbox"
+                    id="editSameDayCheckIn"
+                    className="w-4 h-4 accent-petrol"
+                    checked={editingCleaning.isSameDayCheckIn || false}
+                    onChange={e => setEditingCleaning({...editingCleaning, isSameDayCheckIn: e.target.checked})}
+                  />
+                  <label htmlFor="editSameDayCheckIn" className="text-sm text-slate-700 font-medium cursor-pointer">
+                    {t('sameDayCheckIn') || 'Same-day check-in'}
+                  </label>
+                </div>
                 <div className="col-span-2">
                   <label className="label">{t('staff')}</label>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2 bg-slate-50 rounded-lg">
@@ -1087,6 +1099,18 @@ export default function ClientDetails() {
                     value={newCleaningTime}
                     onChange={(e) => setNewCleaningTime(e.target.value)}
                   />
+                </div>
+                <div className="flex items-center gap-2 pt-2">
+                  <input
+                    type="checkbox"
+                    id="sameDayCheckIn"
+                    className="w-4 h-4 accent-petrol"
+                    checked={newCleaningIsSameDayCheckIn}
+                    onChange={e => setNewCleaningIsSameDayCheckIn(e.target.checked)}
+                  />
+                  <label htmlFor="sameDayCheckIn" className="text-sm text-slate-700 font-medium cursor-pointer">
+                    {t('sameDayCheckIn') || 'Same-day check-in'}
+                  </label>
                 </div>
                 <div className="pt-4">
                   <button type="submit" className="w-full btn-primary py-3">
