@@ -30,7 +30,21 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
+import { format, parse, startOfWeek, getDay } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { Calendar as BigCalendar, dateFnsLocalizer } from 'react-big-calendar';
+
+const locales = {
+  'pt-BR': ptBR,
+};
+
+const localizer = dateFnsLocalizer({
+  format,
+  parse,
+  startOfWeek,
+  getDay,
+  locales,
+});
 
 export default function Dashboard() {
   const { isAdmin, user } = useAuth();
@@ -44,13 +58,14 @@ export default function Dashboard() {
   const [reminders, setReminders] = useState<{id: string, text: string, completed: boolean}[]>([]);
   const [newReminder, setNewReminder] = useState('');
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<'overview' | 'payments'>('overview');
+  const [view, setView] = useState<'overview' | 'payments' | 'calendar'>('overview');
   const [selectedCleaning, setSelectedCleaning] = useState<Cleaning | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [editingCleaning, setEditingCleaning] = useState<Cleaning | null>(null);
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
   const [currentCleaningId, setCurrentCleaningId] = useState<string | null>(null);
   const [newNote, setNewNote] = useState('');
+  const [allCleanings, setAllCleanings] = useState<Cleaning[]>([]);
 
   useEffect(() => {
     const today = format(new Date(), 'yyyy-MM-dd');
@@ -99,6 +114,20 @@ export default function Dashboard() {
         unsubBudgets();
         unsubAllCompleted();
         unsubReminders();
+
+        const unsubAllCleanings = db.collection('cleanings').onSnapshot((snapshot) => {
+          setAllCleanings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Cleaning)));
+        });
+
+        return () => {
+          unsubClients();
+          unsubCleanings();
+          unsubStaff();
+          unsubBudgets();
+          unsubAllCompleted();
+          unsubReminders();
+          unsubAllCleanings();
+        };
       };
     }
 
@@ -249,6 +278,13 @@ export default function Dashboard() {
               >
                 <DollarSign size={16} />
                 {t('reports')}
+              </button>
+              <button 
+                onClick={() => setView('calendar')}
+                className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${view === 'calendar' ? 'bg-white text-petrol shadow-sm' : 'text-slate-500'}`}
+              >
+                <Calendar size={16} />
+                {t('calendar' as any)}
               </button>
             </div>
           )}
@@ -520,6 +556,35 @@ export default function Dashboard() {
                   )}
                 </div>
               </section>
+            </div>
+          ) : view === 'calendar' ? (
+            <div className="card">
+              <BigCalendar
+                localizer={localizer}
+                events={allCleanings.map(c => ({
+                  title: c.clientName,
+                  start: new Date(c.date + 'T' + (c.scheduledTime || '09:00')),
+                  end: new Date(c.date + 'T' + (c.scheduledTime || '09:00')),
+                  allDay: false,
+                  resource: c
+                }))}
+                startAccessor="start"
+                endAccessor="end"
+                style={{ height: '70vh' }}
+                messages={{
+                  next: t('next' as any),
+                  previous: t('previous' as any),
+                  today: t('today' as any),
+                  month: t('month' as any),
+                  week: t('week' as any),
+                  day: t('day' as any),
+                  agenda: t('agenda' as any),
+                  date: t('date' as any),
+                  time: t('time' as any),
+                  event: t('event' as any),
+                }}
+                onSelectEvent={event => setSelectedCleaning(event.resource)}
+              />
             </div>
           ) : (
             <div className="space-y-8">
