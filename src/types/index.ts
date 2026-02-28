@@ -26,6 +26,11 @@ export interface Client {
   extras: {
     fridge: boolean;
     oven: boolean;
+    pet: boolean;
+    window: boolean;
+    bedroom: boolean;
+    room: boolean;
+    bathroom: boolean;
   };
   serviceValue: number;
   teamPaymentValue: number;

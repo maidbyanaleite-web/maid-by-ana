@@ -16,7 +16,7 @@ export default function NewClient() {
     serviceType: 'regular',
     paymentMethod: 'cash',
     clientSince: new Date().toISOString().split('T')[0],
-    extras: { fridge: false, oven: false },
+    extras: { fridge: false, oven: false, pet: false, window: false, bedroom: false, room: false, bathroom: false },
     gallery: [],
     cleaningDates: [],
     paymentDates: [],

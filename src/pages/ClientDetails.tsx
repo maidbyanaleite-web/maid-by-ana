@@ -206,7 +206,26 @@ export default function ClientDetails() {
 
   const openEditModal = () => {
     if (client) {
-      setEditFormData(client);
+      const allExtras = {
+        fridge: false,
+        oven: false,
+        pet: false,
+        window: false,
+        bedroom: false,
+        room: false,
+        bathroom: false,
+      };
+
+      const mergedExtras = {
+        ...allExtras,
+        ...client.extras,
+      };
+
+      setEditFormData({
+        ...client,
+        extras: mergedExtras,
+      });
+
       setIsEditModalOpen(true);
     }
   };
@@ -871,25 +890,21 @@ export default function ClientDetails() {
                 {/* Extras */}
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-slate-600 mb-2">{t('extras')}</label>
-                  <div className="flex items-center gap-6">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        className="w-5 h-5 accent-petrol"
-                        checked={editFormData.extras?.fridge || false}
-                        onChange={e => setEditFormData({...editFormData, extras: {...editFormData.extras, fridge: e.target.checked}})}
-                      />
-                      {t('fridgeAddon')}
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        className="w-5 h-5 accent-petrol"
-                        checked={editFormData.extras?.oven || false}
-                        onChange={e => setEditFormData({...editFormData, extras: {...editFormData.extras, oven: e.target.checked}})}
-                      />
-                      {t('ovenAddon')}
-                    </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 p-4 border rounded-2xl bg-slate-50/50">
+                    {editFormData.extras && Object.keys(editFormData.extras).map(key => (
+                      <label key={key} className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+                        <input 
+                          type="checkbox"
+                          className="w-4 h-4 accent-petrol rounded"
+                          checked={editFormData.extras[key as keyof typeof editFormData.extras] || false}
+                          onChange={e => {
+                            const newExtras = { ...editFormData.extras, [key]: e.target.checked };
+                            setEditFormData({ ...editFormData, extras: newExtras });
+                          }}
+                        />
+                        {t(key + 'Addon' as any)}
+                      </label>
+                    ))}
                   </div>
                 </div>
               </div>

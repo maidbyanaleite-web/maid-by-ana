@@ -309,7 +309,7 @@ export default function StaffDashboard() {
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(cleaning.extras || {}).filter(([_, value]) => value).map(([key]) => (
                       <span key={key} className="bg-slate-100 text-slate-600 text-xs font-medium px-2 py-1 rounded">
-                        {t(key as any)}
+                        {t(key + 'Addon' as any)}
                       </span>
                     ))}
                     {Object.values(cleaning.extras || {}).every(v => !v) && (
