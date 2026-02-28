@@ -800,6 +800,46 @@ export default function ClientDetails() {
               <h2 className="text-2xl font-bold text-petrol mb-6">{t('editClient')}</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Name */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-600 mb-1">{t('clientName' as any)}</label>
+                  <input 
+                    type="text"
+                    className="input"
+                    value={editFormData.name}
+                    onChange={e => setEditFormData({...editFormData, name: e.target.value})}
+                  />
+                </div>
+                {/* Email */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1">{t('email')}</label>
+                  <input 
+                    type="email"
+                    className="input"
+                    value={editFormData.email}
+                    onChange={e => setEditFormData({...editFormData, email: e.target.value})}
+                  />
+                </div>
+                {/* Phone */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 mb-1">{t('phone')}</label>
+                  <input 
+                    type="tel"
+                    className="input"
+                    value={editFormData.phone}
+                    onChange={e => setEditFormData({...editFormData, phone: e.target.value})}
+                  />
+                </div>
+                {/* Address */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-600 mb-1">{t('address')}</label>
+                  <input 
+                    type="text"
+                    className="input"
+                    value={editFormData.address}
+                    onChange={e => setEditFormData({...editFormData, address: e.target.value})}
+                  />
+                </div>
                 {/* Service Value */}
                 <div>
                   <label className="block text-sm font-medium text-slate-600 mb-1">{t('serviceValue')}</label>
