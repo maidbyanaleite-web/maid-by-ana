@@ -444,7 +444,7 @@ export default function Dashboard() {
                               {cleaning.isSameDayCheckIn && (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[10px] font-black animate-pulse border border-red-200">
                                   <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
-                                  CHECK-IN SAME DAY
+                                  {t('sameDayCheckIn')}
                                 </span>
                               )}
                             </div>
@@ -749,7 +749,7 @@ export default function Dashboard() {
                   {selectedCleaning.isSameDayCheckIn && (
                     <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-red-100 text-red-600 text-xs font-black animate-pulse border border-red-200">
                       <span className="w-2 h-2 rounded-full bg-red-600" />
-                      CHECK-IN SAME DAY
+                      {t('sameDayCheckIn')}
                     </span>
                   )}
                 </div>

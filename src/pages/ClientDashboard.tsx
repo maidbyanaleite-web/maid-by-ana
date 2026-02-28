@@ -193,6 +193,12 @@ export default function ClientDashboard() {
                 }`}>
                   {t(nextCleaning.status)}
                 </span>
+                {nextCleaning.isSameDayCheckIn && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[10px] font-black animate-pulse border border-red-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
+                    {t('sameDayCheckIn')}
+                  </span>
+                )}
               </div>
               
               <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
@@ -375,6 +381,12 @@ export default function ClientDashboard() {
                         }`}>
                           {t(cleaning.status)}
                         </span>
+                        {cleaning.isSameDayCheckIn && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[10px] font-black animate-pulse border border-red-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
+                            {t('sameDayCheckIn')}
+                          </span>
+                        )}
                         {cleaning.scheduledTime && (
                           <span className="text-[10px] font-bold text-petrol flex items-center gap-1">
                             <Clock size={10} />
@@ -445,6 +457,14 @@ export default function ClientDashboard() {
               <div className="mb-8 flex justify-between items-start">
                 <div>
                   <h2 className="text-2xl font-bold text-petrol">{selectedCleaning.date}</h2>
+                  {selectedCleaning.isSameDayCheckIn && (
+                    <div className="mt-1">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[10px] font-black animate-pulse border border-red-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
+                        {t('sameDayCheckIn')}
+                      </span>
+                    </div>
+                  )}
                   <p className="text-slate-500">{t('serviceValueAgreed')}: <span className="font-bold text-petrol">${selectedCleaning.serviceValue}</span></p>
                 </div>
                 <div className="text-right">

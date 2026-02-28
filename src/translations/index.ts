@@ -168,7 +168,7 @@ export const translations = {
     date: 'Date',
     time: 'Time',
     editCleaning: 'Edit Cleaning',
-    sameDayCheckIn: 'Same-day check-in',
+    sameDayCheckIn: 'Check in Same Day',
     clientNotes: 'Client Notes'
   },
   pt: {
@@ -338,7 +338,7 @@ export const translations = {
     date: 'Data',
     time: 'Hora',
     editCleaning: 'Editar Limpeza',
-    sameDayCheckIn: 'Check-in no mesmo dia',
+    sameDayCheckIn: 'Check in Same Day',
     clientNotes: 'Notas do Cliente'
   }
 };

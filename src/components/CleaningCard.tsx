@@ -66,8 +66,8 @@ export default function CleaningCard({ cleaning, isAdmin, onEdit, onDelete }: Cl
                 {t(cleaning.status)}
               </p>
               {cleaning.isSameDayCheckIn && (
-                <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold uppercase">
-                  {t('sameDayCheckIn') || 'Same-day check-in'}
+                <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold">
+                  {t('sameDayCheckIn')}
                 </span>
               )}
             </div>

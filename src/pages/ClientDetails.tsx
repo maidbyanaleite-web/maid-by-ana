@@ -1013,7 +1013,7 @@ export default function ClientDetails() {
                     onChange={e => setEditingCleaning({...editingCleaning, isSameDayCheckIn: e.target.checked})}
                   />
                   <label htmlFor="editSameDayCheckIn" className="text-sm text-slate-700 font-medium cursor-pointer">
-                    {t('sameDayCheckIn') || 'Same-day check-in'}
+                    {t('sameDayCheckIn')}
                   </label>
                 </div>
                 <div className="col-span-2">
@@ -1109,7 +1109,7 @@ export default function ClientDetails() {
                     onChange={e => setNewCleaningIsSameDayCheckIn(e.target.checked)}
                   />
                   <label htmlFor="sameDayCheckIn" className="text-sm text-slate-700 font-medium cursor-pointer">
-                    {t('sameDayCheckIn') || 'Same-day check-in'}
+                    {t('sameDayCheckIn')}
                   </label>
                 </div>
                 <div className="pt-4">
