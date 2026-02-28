@@ -83,6 +83,7 @@ export interface Cleaning {
   adminNotes?: string;
   paymentStatus?: 'pending' | 'paid';
   paidStaffIds?: string[];
+  isSameDayCheckIn?: boolean;
 }
 
 export interface BudgetResult {

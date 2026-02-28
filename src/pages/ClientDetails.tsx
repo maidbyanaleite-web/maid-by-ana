@@ -51,6 +51,7 @@ export default function ClientDetails() {
   const [isAddingCleaning, setIsAddingCleaning] = useState(false);
   const [newCleaningDate, setNewCleaningDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [newCleaningTime, setNewCleaningTime] = useState('09:00');
+  const [newCleaningIsSameDayCheckIn, setNewCleaningIsSameDayCheckIn] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -283,7 +284,8 @@ export default function ClientDetails() {
         serviceValue: client.serviceValue,
         teamPaymentValue: client.teamPaymentValue,
         status: 'scheduled',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        isSameDayCheckIn: newCleaningIsSameDayCheckIn
       });
       setIsAddingCleaning(false);
     } catch (error) {

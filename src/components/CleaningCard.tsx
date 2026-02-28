@@ -61,9 +61,16 @@ export default function CleaningCard({ cleaning, isAdmin, onEdit, onDelete }: Cl
         <div className="flex items-center gap-4">
           <div>
             <p className="font-bold text-petrol">{cleaning.date}</p>
-            <p className={`text-xs font-bold uppercase ${cleaning.status === 'completed' ? 'text-emerald-500' : 'text-gold'}`}>
-              {t(cleaning.status)}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className={`text-xs font-bold uppercase ${cleaning.status === 'completed' ? 'text-emerald-500' : 'text-gold'}`}>
+                {t(cleaning.status)}
+              </p>
+              {cleaning.isSameDayCheckIn && (
+                <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold uppercase">
+                  {t('sameDayCheckIn') || 'Same-day check-in'}
+                </span>
+              )}
+            </div>
           </div>
           {isAdmin && (
             <div className="flex items-center gap-2">
